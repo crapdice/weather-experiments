@@ -4,7 +4,10 @@ import pandas as pd
 from retry_requests import retry
 from datetime import datetime
 
-def fetch_chicago_weather():
+def fetch_chicago_weather(start_date="1974-01-01", end_date=None):
+    if end_date is None:
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        
     # Setup the Open-Meteo API client with cache and retry on error
     cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
     retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
@@ -15,8 +18,8 @@ def fetch_chicago_weather():
     params = {
         "latitude": 41.9742,
         "longitude": -87.9073,
-        "start_date": "1974-01-01",
-        "end_date": datetime.now().strftime('%Y-%m-%d'),
+        "start_date": start_date,
+        "end_date": end_date,
         "daily": ["temperature_2m_max", "temperature_2m_min", "temperature_2m_mean"],
         "temperature_unit": "fahrenheit",
         "timezone": "America/Chicago"
