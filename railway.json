@@ -6,8 +6,5 @@
     },
     "deploy": {
         "startCommand": "npm run start"
-    },
-    "source": {
-        "root": "next-app"
     }
 }
