@@ -190,7 +190,7 @@ export function Dashboard() {
         }
 
         .chart-area {
-          min-height: 1100px;
+          min-height: 1200px;
           padding: 32px;
           display: flex;
           flex-direction: column;
