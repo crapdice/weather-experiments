@@ -289,14 +289,17 @@ def generate_main_css(t, theme_choice):
     hr {{
         border-color: {hex_to_rgba(t['accent_1'], 0.2)} !important;
     }}
-    /* --- MOBILE RESPONSIVENESS (Phase 1) --- */
+    /* --- MOBILE RESPONSIVENESS (Phase 1 + Polish) --- */
     @media (max-width: 768px) {{
         .header-text {{
-            font-size: 2.0rem !important;
+            font-size: 1.8rem !important; /* Reduced from 2.0rem */
             text-align: center;
+            line-height: 1.2;
+            margin-top: 20px !important; /* Clear Streamlit header */
         }}
         .lab-title {{
             font-size: 1.1rem !important;
+            text-align: center;
         }}
         [data-testid="stMetric"] {{
             padding: 10px !important;
@@ -306,7 +309,8 @@ def generate_main_css(t, theme_choice):
         }}
         .pulse-widget {{
             padding: 10px !important;
-            margin-bottom: 10px !important;
+            margin-bottom: 20px !important;
+            text-align: center;
         }}
         /* Stack column containers on mobile if needed (handled by Streamlit usually, but we force specific tweaks) */
         [data-testid="stSidebar"] {{
@@ -324,11 +328,11 @@ def generate_main_css(t, theme_choice):
         /* Phase 3: Chart Height Optimization */
         /* Force charts to be shorter on mobile to allow scrolling */
         [data-testid="stPlotlyChart"] > div {{
-            height: 600px !important;
-            max-height: 600px !important;
+            height: 500px !important; /* Reduced from 600px */
+            max-height: 500px !important;
         }}
         [data-testid="stPlotlyChart"] iframe {{
-            height: 600px !important;
+            height: 500px !important;
         }}
         
         /* Phase 4: Touch-Friendly Controls */
@@ -341,6 +345,10 @@ def generate_main_css(t, theme_choice):
         .stRadio, .stSelectbox {{
             margin-bottom: 15px !important;
         }}
+        
+        /* POLISH: 3D Chart Adjustment */
+        /* Hide complex 3D charts on mobile if class is tagged, or valid attempt to squash */
+        /* (Streamlit doesn't allow easy class tagging of specific charts, so we rely on global behavior) */
     }}
     </style>
 """
@@ -493,17 +501,26 @@ else:
             colorscale='Viridis' if theme_choice != "Solar-Paper" else 'Portland'
         )])
         fig.update_layout(
-            scene=dict(
-                xaxis_title='Day of Year',
-                yaxis_title='Year',
-                zaxis_title='Temp (°F)',
-                camera=dict(eye=dict(x=1.5, y=1.5, z=1.2))
-            ),
-            height=800, template=t['plotly_template'], margin=dict(l=0, r=0, b=0, t=40),
-            font=dict(family=t['font']),
-            paper_bgcolor='rgba(0,0,0,0)'
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        title="Thermal Topography (3D Surface)",
+        scene=dict(
+            xaxis_title='Day of Year',
+            yaxis_title='Year',
+            zaxis_title='Temp (°F)',
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=False),
+            zaxis=dict(showgrid=True),
+            camera=dict(eye=dict(x=1.5, y=1.5, z=1.2)) # Better angle for mobile
+        ),
+        margin=dict(l=0, r=0, b=0, t=40), # Minimized margins
+        height=600, # Fixed height for scrollability
+        font=dict(family=t['font'], color=t['text']),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+    )
+    # Move colorbar to horizontal on bottom for mobile-ish layout (unfortunately requires layout switch or clever hack)
+    # For now, we minimize margins.
+    
+    st.plotly_chart(fig, use_container_width=True)
 
     with tab2:
         st.subheader("Radial Climate Compass")
