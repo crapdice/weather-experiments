@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
+import { MobileNav } from './MobileNav';
 import { MetricCard } from './MetricCard';
 import { OverviewChart } from './OverviewChart';
 import { ComparisonChart } from './ComparisonChart';
@@ -93,6 +94,13 @@ export function Dashboard() {
         onRefresh={handleRefresh}
       />
 
+      <MobileNav
+        currentView={view}
+        onViewChange={setView}
+        isRefreshing={refreshing}
+        onRefresh={handleRefresh}
+      />
+
       <main className="main-content">
         <header className="header">
           <h1 className="title">KORD Intelligence</h1>
@@ -102,6 +110,13 @@ export function Dashboard() {
         </header>
 
         <section className="metrics-grid">
+          <MetricCard
+            label="Current Conditions"
+            value={stats?.currentTemp !== undefined ? `${stats.currentTemp.toFixed(1)}°F` : '--°F'}
+            delta={stats?.currentTempTime ? `Real-time | ${stats.currentTempTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${stats.currentTempTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` : "Real-time"}
+            accent="secondary"
+            help="The latest temperature reading from KORD via Open-Meteo."
+          />
           <MetricCard
             label="All-Time Max"
             value={`${stats?.maxTemp.toFixed(1)}°F`}
@@ -212,8 +227,8 @@ export function Dashboard() {
 
         .metrics-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 16px;
         }
 
         .chart-area {
@@ -279,14 +294,33 @@ export function Dashboard() {
 
         @media (max-width: 768px) {
           .main-content {
-            padding: 20px;
+            padding: 16px;
+            padding-top: 80px; /* Space for mobile header */
+            gap: 24px;
           }
           .title {
             font-size: 2.2rem;
           }
+          .subtitle {
+            font-size: 0.9rem;
+          }
+          .metrics-grid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+          }
           .chart-area {
-            padding: 16px;
-            min-height: 500px;
+            padding: 12px;
+            min-height: 400px;
+          }
+          .lab-tabs {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 8px;
+            -webkit-overflow-scrolling: touch;
+          }
+          .lab-tabs button {
+            padding: 6px 12px;
+            font-size: 0.8rem;
           }
         }
       `}</style>

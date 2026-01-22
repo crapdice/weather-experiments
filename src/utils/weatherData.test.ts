@@ -1,0 +1,69 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { refreshWeatherData, WeatherRecord } from './weatherData';
+
+describe('weatherData integration', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+        global.fetch = vi.fn();
+    });
+
+    it('should synthesize a record for today when it is missing from the daily feed', async () => {
+        const mockCurrentData: WeatherRecord[] = [
+            {
+                Date: new Date('2026-01-21T12:00:00'),
+                'Max Temp (°F)': 30,
+                'Min Temp (°F)': 20,
+                'Avg Temp (°F)': 25,
+                DayOfYear: 21,
+                Year: 2026,
+                Rain: 0,
+                Snow: 0
+            }
+        ];
+
+        const mockApiDaily = {
+            daily: {
+                time: ['2026-01-21'],
+                temperature_2m_max: [30],
+                temperature_2m_min: [20],
+                temperature_2m_mean: [25],
+                rain_sum: [0],
+                snowfall_sum: [0]
+            }
+        };
+
+        const mockApiCurrent = {
+            current: {
+                time: '2026-01-22T08:00',
+                temperature_2m: 28.5
+            }
+        };
+
+        (global.fetch as any).mockImplementation((url: string) => {
+            if (url.includes('forecast') && url.includes('current')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve(mockApiCurrent)
+                });
+            }
+            if (url.includes('forecast')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve(mockApiDaily)
+                });
+            }
+            return Promise.resolve({ ok: false });
+        });
+
+        // Use the current date for the test expectation
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        const result = await refreshWeatherData(mockCurrentData);
+
+        const hasToday = result.data.some(d => d.Date.toISOString().split('T')[0] === todayStr);
+        expect(hasToday).toBe(true);
+
+        const todayRecord = result.data.find(d => d.Date.toISOString().split('T')[0] === todayStr);
+        expect(todayRecord?.['Avg Temp (°F)']).toBe(28.5);
+    });
+});

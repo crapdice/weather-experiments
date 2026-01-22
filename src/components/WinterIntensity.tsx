@@ -34,12 +34,20 @@ export function WinterIntensity({ data }: Props) {
     useEffect(() => {
         if (!winterData.length || !svgRef.current || !containerRef.current || !dateRange) return;
 
-        const margin = { top: 40, right: 60, bottom: 80, left: 60 };
+        const isMobile = window.innerWidth <= 768;
+        const margin = {
+            top: 40,
+            right: isMobile ? 30 : 60,
+            bottom: 80,
+            left: isMobile ? 30 : 60
+        };
         const width = containerRef.current.clientWidth - margin.left - margin.right;
-        const mainHeight = 400;
+        const mainHeight = isMobile ? 250 : 400;
         const brushHeight = 40;
         const padding = 40;
         const totalHeight = mainHeight + brushHeight + padding;
+
+        svgRef.current.style.height = `${totalHeight + margin.top + margin.bottom}px`;
 
         const svg = d3.select(svgRef.current);
         svg.selectAll("*").remove();
@@ -182,7 +190,7 @@ export function WinterIntensity({ data }: Props) {
                 }}>Reset Range</button>
             </div>
             <div className="chart-body">
-                <svg ref={svgRef} style={{ width: '100%', height: '580px' }}></svg>
+                <svg ref={svgRef} style={{ width: '100%' }}></svg>
             </div>
             <style jsx>{`
         .winter-intensity-container {
@@ -203,6 +211,19 @@ export function WinterIntensity({ data }: Props) {
           display: flex;
           flex-direction: column;
         }
+        @media (max-width: 768px) {
+          .winter-intensity-container {
+            padding: 16px;
+            gap: 16px;
+          }
+          .chart-header strong {
+            font-size: 1.1rem;
+          }
+          .chart-header span {
+            font-size: 0.7rem;
+          }
+        }
+
         .chart-header strong {
           color: #ffffff;
           text-transform: uppercase;

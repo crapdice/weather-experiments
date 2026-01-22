@@ -29,6 +29,8 @@ export interface ClimateStats {
     volatility: number;
     decadalDelta: number;
     lastUpdate: Date;
+    currentTemp?: number;
+    currentTempTime?: Date;
 }
 
 export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats: ClimateStats } {
@@ -89,7 +91,27 @@ export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats
         d.GDD = Math.max(0, d['Avg Temp (°F)'] - 50);
     }
 
-    return { data, stats: calculateStats(data) };
+    const stats = calculateStats(data);
+    return { data, stats };
+}
+
+async function fetchCurrentTemp(): Promise<{ temp: number, time: Date } | undefined> {
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&current=temperature_2m&temperature_unit=fahrenheit&timezone=America%2FChicago`;
+        const res = await fetch(url);
+        if (res.ok) {
+            const json = await res.json();
+            if (json.current && json.current.temperature_2m !== undefined) {
+                return {
+                    temp: json.current.temperature_2m,
+                    time: new Date(json.current.time)
+                };
+            }
+        }
+    } catch (e) {
+        console.error("Failed to fetch current temp:", e);
+    }
+    return undefined;
 }
 
 function calculateStats(data: WeatherRecord[]): ClimateStats {
@@ -167,10 +189,17 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
         console.error("Historical precip fetch failed:", e);
     }
 
+    const currentInfo = await fetchCurrentTemp();
+    if (currentInfo) {
+        result.stats.currentTemp = currentInfo.temp;
+        result.stats.currentTempTime = currentInfo.time;
+    }
+
     return result;
 }
 
 export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
+    const currentInfo = await fetchCurrentTemp();
     try {
         // Use Forecast API with past_days=7 for more reliable real-time updates
         const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,rain_sum,snowfall_sum&temperature_unit=fahrenheit&timezone=America%2FChicago&past_days=7&forecast_days=1`;
@@ -180,7 +209,7 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
         const apiData = await response.json();
 
         if (!apiData.daily || !apiData.daily.time) {
-            return { data: currentData, stats: calculateStats(currentData) };
+            return ensureTodayRecord(currentData, currentInfo);
         }
 
         const newRecordsRaw = apiData.daily.time.map((time: string, i: number) => ({
@@ -196,7 +225,10 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
         const existingDates = new Set(currentData.map(d => d.Date.toISOString().split('T')[0]));
         const uniqueNew = newRecordsRaw.filter((r: any) => !existingDates.has(r.Date));
 
-        if (uniqueNew.length === 0) return { data: currentData, stats: calculateStats(currentData) };
+        if (uniqueNew.length === 0) {
+            // Even if no new daily records, we must ensure today's partial record is present for the charts
+            return ensureTodayRecord(currentData, currentInfo);
+        };
 
         // Convert existing records back to raw format
         const rawCurrent = currentData.map(d => ({
@@ -208,11 +240,51 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
             Snow: d.Snow,
         }));
 
-        return processAndEnrich([...rawCurrent, ...uniqueNew]);
+        const { data: finalData, stats: finalStats } = processAndEnrich([...rawCurrent, ...uniqueNew]);
+        return ensureTodayRecord(finalData, currentInfo);
     } catch (e) {
         console.error("Refresh failed:", e);
-        return { data: currentData, stats: calculateStats(currentData) };
+        return ensureTodayRecord(currentData, currentInfo);
     }
+}
+
+function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, time: Date }): { data: WeatherRecord[], stats: ClimateStats } {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const hasToday = data.some(d => d.Date.toISOString().split('T')[0] === todayStr);
+
+    if (!hasToday && currentInfo) {
+        const todayRecord: WeatherRecord = {
+            Date: new Date(todayStr + 'T12:00:00'), // Noon today
+            'Max Temp (°F)': currentInfo.temp,
+            'Min Temp (°F)': currentInfo.temp,
+            'Avg Temp (°F)': currentInfo.temp,
+            DayOfYear: getDayOfYear(new Date()),
+            Year: new Date().getFullYear(),
+            Rain: 0,
+            Snow: 0,
+        };
+        const newData = [...data, todayRecord];
+        // Re-enrich to get SMA7 etc
+        const result = processAndEnrich(newData.map(d => ({
+            Date: d.Date.toISOString().split('T')[0],
+            'Max Temp (°F)': d['Max Temp (°F)'],
+            'Min Temp (°F)': d['Min Temp (°F)'],
+            'Avg Temp (°F)': d['Avg Temp (°F)'],
+            Rain: d.Rain,
+            Snow: d.Snow,
+        })));
+
+        result.stats.currentTemp = currentInfo.temp;
+        result.stats.currentTempTime = currentInfo.time;
+        return result;
+    }
+
+    const stats = calculateStats(data);
+    if (currentInfo) {
+        stats.currentTemp = currentInfo.temp;
+        stats.currentTempTime = currentInfo.time;
+    }
+    return { data, stats };
 }
 
 import SunCalc from 'suncalc';

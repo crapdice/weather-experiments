@@ -23,12 +23,15 @@ export function RadialCompass({ data }: Props) {
     useEffect(() => {
         if (!data.length || !svgRef.current) return;
 
+        const isMobile = window.innerWidth <= 768;
         const width = svgRef.current.clientWidth;
-        const height = 650;
-        const margin = 60;
-        const legendWidth = 120;
+        const height = isMobile ? 400 : 650;
+        const margin = isMobile ? 40 : 60;
+        const legendWidth = isMobile ? 0 : 120;
         const chartWidth = width - legendWidth;
         const radius = Math.min(chartWidth, height) / 2 - margin;
+
+        svgRef.current.style.height = `${height}px`;
 
         const svg = d3.select(svgRef.current);
         svg.selectAll("*").remove();
@@ -136,29 +139,31 @@ export function RadialCompass({ data }: Props) {
         });
 
         // --- LEGEND (Years) ---
-        const legend = svg.append("g")
-            .attr("transform", `translate(${chartWidth + 10}, ${margin})`);
+        if (!isMobile) {
+            const legend = svg.append("g")
+                .attr("transform", `translate(${chartWidth + 10}, ${margin})`);
 
-        const legendYears = [1974, 1984, 1994, 2004, 2014, 2024];
-        const legendItemHeight = 25;
+            const legendYears = [1974, 1984, 1994, 2004, 2014, 2024];
+            const legendItemHeight = 25;
 
-        legend.selectAll(".legend-item")
-            .data(legendYears)
-            .enter()
-            .append("g")
-            .attr("transform", (d, i) => `translate(0, ${i * legendItemHeight})`)
-            .call(item => {
-                item.append("line")
-                    .attr("x1", 0).attr("y1", 0)
-                    .attr("x2", 20).attr("y2", 0)
-                    .attr("stroke", d => colorScale(d))
-                    .attr("stroke-width", 3);
-                item.append("text")
-                    .attr("x", 30).attr("y", 4)
-                    .style("fill", "var(--text-secondary)")
-                    .style("font-size", "0.75rem")
-                    .text(d => d);
-            });
+            legend.selectAll(".legend-item")
+                .data(legendYears)
+                .enter()
+                .append("g")
+                .attr("transform", (d, i) => `translate(0, ${i * legendItemHeight})`)
+                .call(item => {
+                    item.append("line")
+                        .attr("x1", 0).attr("y1", 0)
+                        .attr("x2", 20).attr("y2", 0)
+                        .attr("stroke", d => colorScale(d))
+                        .attr("stroke-width", 3);
+                    item.append("text")
+                        .attr("x", 30).attr("y", 4)
+                        .style("fill", "var(--text-secondary)")
+                        .style("font-size", "0.75rem")
+                        .text(d => d);
+                });
+        }
 
     }, [data, selectedYear, years, yearGroups]);
 
@@ -183,7 +188,7 @@ export function RadialCompass({ data }: Props) {
             </div>
 
             <div className="radial-chart-box glass-panel">
-                <svg ref={svgRef} style={{ width: '100%', height: '650px' }}></svg>
+                <svg ref={svgRef} style={{ width: '100%' }}></svg>
             </div>
 
             <style jsx>{`
@@ -199,6 +204,26 @@ export function RadialCompass({ data }: Props) {
           align-items: flex-end;
           border-bottom: 1px solid var(--border-subtle);
           padding-bottom: 16px;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+        @media (max-width: 768px) {
+          .radial-header {
+            align-items: flex-start;
+          }
+          .radial-controls {
+            align-items: flex-start;
+            width: 100%;
+          }
+          select {
+            width: 100%;
+          }
+          h3 {
+            font-size: 1.1rem;
+          }
+          p {
+            font-size: 0.75rem;
+          }
         }
         h3 { 
           color: var(--accent-1); 

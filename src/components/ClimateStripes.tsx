@@ -46,10 +46,18 @@ export function ClimateStripes({ data }: Props) {
     useEffect(() => {
         if (!monthlyData.length || !svgRef.current || !range) return;
 
-        const margin = { top: 40, right: 20, bottom: 80, left: 20 };
+        const isMobile = window.innerWidth <= 768;
+        const margin = {
+            top: 60,
+            right: isMobile ? 10 : 20,
+            bottom: 80,
+            left: isMobile ? 10 : 20
+        };
         const width = svgRef.current.clientWidth - margin.left - margin.right;
-        const mainHeight = 350;
+        const mainHeight = isMobile ? 200 : 350;
         const sliderHeight = 30;
+
+        svgRef.current.style.height = `${mainHeight + sliderHeight + margin.top + margin.bottom + 40}px`;
 
         const svg = d3.select(svgRef.current);
         svg.selectAll("*").remove();
@@ -85,10 +93,10 @@ export function ClimateStripes({ data }: Props) {
             .attr("fill", d => color(d.anomaly));
 
         // --- LEGEND ---
-        const legendWidth = 200;
+        const legendWidth = isMobile ? 120 : 200;
         const legendHeight = 10;
         const gLegend = g.append("g")
-            .attr("transform", `translate(${width - legendWidth}, -25)`);
+            .attr("transform", `translate(${width - legendWidth}, -35)`);
 
         const legendScale = d3.scaleLinear().domain([-4, 4]).range([0, legendWidth]);
 
@@ -257,7 +265,7 @@ export function ClimateStripes({ data }: Props) {
                 <h3>High-Density Climate Stripes</h3>
                 <p>Monthly temperature anomalies relative to 50-year seasonal baselines. Red: Warmer | Blue: Cooler.</p>
             </div>
-            <svg ref={svgRef} style={{ width: '100%', height: '520px' }}></svg>
+            <svg ref={svgRef} style={{ width: '100%' }}></svg>
             <style jsx>{`
                 .stripes-container {
                   padding: 10px;
@@ -269,6 +277,18 @@ export function ClimateStripes({ data }: Props) {
                     fill: var(--accent-1);
                     fill-opacity: 0.1;
                     stroke: var(--accent-1);
+                }
+
+                @media (max-width: 768px) {
+                  .stripes-container {
+                    padding: 4px;
+                  }
+                  h3 {
+                    font-size: 1rem;
+                  }
+                  p {
+                    font-size: 0.7rem;
+                  }
                 }
             `}</style>
         </div>

@@ -116,6 +116,20 @@ export function ComparisonChart({ data }: Props) {
         .controls {
           display: flex;
           gap: 20px;
+          flex-wrap: wrap;
+        }
+        @media (max-width: 768px) {
+          .controls {
+            gap: 12px;
+          }
+          .control-group {
+            flex: 1;
+            min-width: 120px;
+          }
+          select {
+            width: 100%;
+            padding: 10px;
+          }
         }
         .control-group {
           display: flex;

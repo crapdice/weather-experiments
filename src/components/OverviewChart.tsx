@@ -61,15 +61,23 @@ export function OverviewChart({ data }: Props) {
     useEffect(() => {
         if (!data.length || !svgRef.current || !dateRange) return;
 
-        const margin = { top: 40, right: 100, bottom: 60, left: 60 };
+        const isMobile = window.innerWidth <= 768;
+        const margin = {
+            top: 40,
+            right: isMobile ? 20 : 100,
+            bottom: 60,
+            left: isMobile ? 40 : 60
+        };
         const width = svgRef.current.clientWidth - margin.left - margin.right;
-        const verticalPadding = 80;
+        const verticalPadding = isMobile ? 40 : 80;
         const sliderHeight = 30;
 
-        const h1 = 450;
-        const h2 = 180;
-        const h3 = 180;
+        const h1 = isMobile ? 300 : 450;
+        const h2 = isMobile ? 120 : 180;
+        const h3 = isMobile ? 120 : 180;
         const totalHeight = h1 + h2 + h3 + verticalPadding * 2 + sliderHeight + 20;
+
+        svgRef.current.style.height = `${totalHeight + margin.top + margin.bottom}px`;
 
         const svg = d3.select(svgRef.current);
         svg.selectAll("*").remove();
@@ -596,8 +604,8 @@ export function OverviewChart({ data }: Props) {
                 </div>
             </div>
 
-            <div className="chart-container" style={{ width: '100%', minHeight: '1100px' }}>
-                <svg ref={svgRef} style={{ width: '100%', height: '1200px' }}></svg>
+            <div className="chart-container" style={{ width: '100%' }}>
+                <svg ref={svgRef} style={{ width: '100%' }}></svg>
             </div>
 
             <style jsx>{`
@@ -608,9 +616,17 @@ export function OverviewChart({ data }: Props) {
         }
         .timeframe-buttons {
           display: flex;
-          justify-content: center;
+          justify-content: flex-start;
           gap: 8px;
           margin-bottom: 10px;
+          overflow-x: auto;
+          white-space: nowrap;
+          padding: 4px 0;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .timeframe-buttons::-webkit-scrollbar {
+          display: none;
         }
         .time-btn {
           background: var(--bg-component);

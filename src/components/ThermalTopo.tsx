@@ -34,15 +34,17 @@ export function ThermalTopo({ data }: Props) {
     if (!grid || !containerRef.current || !canvasRef.current) return;
 
     const { matrix, years, doys } = grid;
+    const isMobile = window.innerWidth <= 768;
     const width = containerRef.current.clientWidth;
-    const height = 650;
+    const height = isMobile ? 400 : 650;
 
     // --- Scene Setup ---
     const scene = new THREE.Scene();
     scene.background = null;
 
     const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 2000);
-    camera.position.set(80, 80, 100);
+    const cameraPos = isMobile ? new THREE.Vector3(120, 120, 150) : new THREE.Vector3(80, 80, 100);
+    camera.position.copy(cameraPos);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({
@@ -212,9 +214,11 @@ export function ThermalTopo({ data }: Props) {
     const handleResize = () => {
       if (!containerRef.current) return;
       const w = containerRef.current.clientWidth;
-      camera.aspect = w / height;
+      const isMob = window.innerWidth <= 768;
+      const h = isMob ? 400 : 650;
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setSize(w, height);
+      renderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
 
@@ -295,6 +299,26 @@ export function ThermalTopo({ data }: Props) {
           border: 1px solid var(--accent-1);
           box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
         }
+
+        @media (max-width: 768px) {
+          .topo-container {
+            height: 400px;
+          }
+          .topo-overlay {
+            width: 180px;
+            padding: 12px;
+            top: 10px;
+            left: 10px;
+            gap: 8px;
+          }
+          .overlay-header strong {
+            font-size: 0.8rem;
+          }
+          .topo-stats, .topo-legend {
+            display: none;
+          }
+        }
+
         .overlay-header {
           display: flex;
           flex-direction: column;
