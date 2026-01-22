@@ -7,6 +7,7 @@ import { OverviewChart } from './OverviewChart';
 import { ComparisonChart } from './ComparisonChart';
 import { ClimateStripes } from './ClimateStripes';
 import { ThermalTopo } from './ThermalTopo';
+import { RadialCompass } from './RadialCompass';
 import { loadWeatherData, WeatherRecord, ClimateStats } from '@/utils/weatherData';
 
 export function Dashboard() {
@@ -125,11 +126,12 @@ export function Dashboard() {
               <div className="lab-tabs">
                 <button className={labTab === 'stripes' ? 'active' : ''} onClick={() => setLabTab('stripes')}>Climate Stripes</button>
                 <button className={labTab === 'topo' ? 'active' : ''} onClick={() => setLabTab('topo')}>3D Thermal Topo</button>
-                <button disabled title="Coming soon">Radial Compass</button>
+                <button className={labTab === 'radial' ? 'active' : ''} onClick={() => setLabTab('radial')}>Radial Compass</button>
               </div>
               <div className="lab-content">
                 {labTab === 'stripes' && data.length > 0 && <ClimateStripes data={data} />}
                 {labTab === 'topo' && data.length > 0 && <ThermalTopo data={data} />}
+                {labTab === 'radial' && data.length > 0 && <RadialCompass data={data} />}
               </div>
             </div>
           )}
