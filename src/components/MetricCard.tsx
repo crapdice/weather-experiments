@@ -8,9 +8,13 @@ interface MetricCardProps {
   delta?: string;
   help?: string;
   accent?: 'primary' | 'secondary' | 'ro';
+  subValues?: {
+    high: string | number;
+    low: string | number;
+  };
 }
 
-export function MetricCard({ label, value, delta, help, accent = 'primary' }: MetricCardProps) {
+export function MetricCard({ label, value, delta, help, accent = 'primary', subValues }: MetricCardProps) {
   const accentColor = accent === 'primary' ? 'var(--accent-1)' :
     accent === 'secondary' ? 'var(--accent-2)' :
       'var(--ro-line)';
@@ -18,7 +22,21 @@ export function MetricCard({ label, value, delta, help, accent = 'primary' }: Me
   return (
     <div className="metric-card glass-panel" title={help}>
       <span className="metric-label">{label}</span>
-      <div className="metric-value">{value}</div>
+      <div className="value-container">
+        <div className="metric-value">{value}</div>
+        {subValues && (
+          <div className="sub-values">
+            <div className="sub-value hgh">
+              <span className="sub-label">H</span>
+              <span className="sub-num">{subValues.high}</span>
+            </div>
+            <div className="sub-value low">
+              <span className="sub-label">L</span>
+              <span className="sub-num">{subValues.low}</span>
+            </div>
+          </div>
+        )}
+      </div>
       {delta && <div className="metric-delta">{delta}</div>}
 
       <style jsx>{`
@@ -44,11 +62,42 @@ export function MetricCard({ label, value, delta, help, accent = 'primary' }: Me
           word-break: break-word;
         }
 
+        .value-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        
         .metric-value {
           font-size: 1.5rem;
           font-weight: 800;
           color: ${accentColor};
           white-space: nowrap;
+        }
+
+        .sub-values {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 0px;
+          line-height: 1;
+        }
+
+        .sub-value {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.7rem;
+          font-weight: 600;
+          font-family: monospace;
+        }
+
+        .sub-value.hgh { color: #ff4b2b; }
+        .sub-value.low { color: #00d2ff; }
+
+        .sub-label {
+          opacity: 0.6;
+          font-size: 0.6rem;
         }
 
         .metric-delta {

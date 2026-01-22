@@ -32,6 +32,8 @@ export interface ClimateStats {
     currentTemp?: number;
     currentPrecip?: number;
     currentTempTime?: Date;
+    todayMax?: number;
+    todayMin?: number;
 }
 
 export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats: ClimateStats } {
@@ -96,9 +98,10 @@ export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats
     return { data, stats };
 }
 
-async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, time: Date } | undefined> {
+async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, time: Date, todayMax: number, todayMin: number } | undefined> {
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&current=temperature_2m,precipitation&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FChicago`;
+        // Fetch both current and daily (for today's high/low) in one call
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&current=temperature_2m,precipitation&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FChicago&forecast_days=1`;
         const res = await fetch(url);
         if (res.ok) {
             const json = await res.json();
@@ -106,7 +109,9 @@ async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, ti
                 return {
                     temp: json.current.temperature_2m,
                     precip: json.current.precipitation || 0,
-                    time: new Date(json.current.time)
+                    time: new Date(json.current.time),
+                    todayMax: json.daily.temperature_2m_max[0],
+                    todayMin: json.daily.temperature_2m_min[0]
                 };
             }
         }
@@ -196,6 +201,8 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
         result.stats.currentTemp = currentInfo.temp;
         result.stats.currentPrecip = currentInfo.precip;
         result.stats.currentTempTime = currentInfo.time;
+        result.stats.todayMax = currentInfo.todayMax;
+        result.stats.todayMin = currentInfo.todayMin;
     }
 
     return result;
@@ -251,7 +258,7 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
     }
 }
 
-function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, precip: number, time: Date }): { data: WeatherRecord[], stats: ClimateStats } {
+function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, precip: number, time: Date, todayMax: number, todayMin: number }): { data: WeatherRecord[], stats: ClimateStats } {
     const todayStr = new Date().toISOString().split('T')[0];
     const hasToday = data.some(d => d.Date.toISOString().split('T')[0] === todayStr);
 
@@ -280,6 +287,8 @@ function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, 
         result.stats.currentTemp = currentInfo.temp;
         result.stats.currentPrecip = currentInfo.precip;
         result.stats.currentTempTime = currentInfo.time;
+        result.stats.todayMax = currentInfo.todayMax;
+        result.stats.todayMin = currentInfo.todayMin;
         return result;
     }
 
@@ -288,6 +297,8 @@ function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, 
         stats.currentTemp = currentInfo.temp;
         stats.currentPrecip = currentInfo.precip;
         stats.currentTempTime = currentInfo.time;
+        stats.todayMax = currentInfo.todayMax;
+        stats.todayMin = currentInfo.todayMin;
     }
     return { data, stats };
 }
