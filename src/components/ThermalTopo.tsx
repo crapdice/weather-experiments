@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as d3 from 'd3';
+import { HelpCircle, X } from 'lucide-react';
 import { WeatherRecord } from '@/utils/weatherData';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 export function ThermalTopo({ data }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showInfo, setShowInfo] = React.useState(false);
 
   // Pivot data into a Year x DOY grid
   const grid = useMemo(() => {
@@ -235,7 +237,15 @@ export function ThermalTopo({ data }: Props) {
   return (
     <div ref={containerRef} className="topo-container">
       <canvas ref={canvasRef} />
-      <div className="topo-overlay glass-panel">
+      <button
+        className="info-toggle"
+        onClick={() => setShowInfo(!showInfo)}
+        aria-label="Toggle Info"
+      >
+        {showInfo ? <X size={20} /> : <HelpCircle size={20} />}
+      </button>
+
+      <div className={`topo-overlay glass-panel ${showInfo ? 'visible' : ''}`}>
         <div className="overlay-header">
           <strong>Chicago Thermal Landscape</strong>
           <span>Physical Anomaly Surface</span>
@@ -298,6 +308,26 @@ export function ThermalTopo({ data }: Props) {
           background: rgba(0,0,0,0.8);
           border: 1px solid var(--accent-1);
           box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
+          transition: all 0.3s ease;
+          z-index: 10;
+        }
+
+        .info-toggle {
+          display: none;
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: var(--bg-component);
+          border: 1px solid var(--accent-1);
+          color: var(--accent-1);
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          cursor: pointer;
+          align-items: center;
+          justify-content: center;
+          z-index: 20;
+          box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
         }
 
         @media (max-width: 768px) {
@@ -307,9 +337,20 @@ export function ThermalTopo({ data }: Props) {
           .topo-overlay {
             width: 180px;
             padding: 12px;
-            top: 10px;
+            top: 60px; /* Leave space for toggle button */
             left: 10px;
             gap: 8px;
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+          }
+          .topo-overlay.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+          }
+          .info-toggle {
+            display: flex;
           }
           .overlay-header strong {
             font-size: 0.8rem;

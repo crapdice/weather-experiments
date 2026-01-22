@@ -11,6 +11,16 @@ interface Props {
 export function RadialCompass({ data }: Props) {
     const svgRef = useRef<SVGSVGElement>(null);
     const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+    const [width, setWidth] = useState(0);
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (svgRef.current) setWidth(svgRef.current.clientWidth);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const years = useMemo(() => {
         return Array.from(new Set(data.map(d => d.Year))).sort((a, b) => a - b);
@@ -165,7 +175,7 @@ export function RadialCompass({ data }: Props) {
                 });
         }
 
-    }, [data, selectedYear, years, yearGroups]);
+    }, [data, selectedYear, years, yearGroups, width]);
 
     return (
         <div className="radial-container">

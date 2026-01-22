@@ -11,6 +11,16 @@ interface Props {
 export function ClimateStripes({ data }: Props) {
     const svgRef = useRef<SVGSVGElement>(null);
     const [range, setRange] = useState<[Date, Date] | null>(null);
+    const [widthState, setWidthState] = useState(0);
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (svgRef.current) setWidthState(svgRef.current.clientWidth);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const monthlyData = useMemo(() => {
         const grouped = d3.group(data, d => `${d.Year}-${d.Date.getMonth() + 1}`);
@@ -257,7 +267,7 @@ export function ClimateStripes({ data }: Props) {
         return () => {
             tooltip.remove();
         };
-    }, [filteredStripes, range]);
+    }, [filteredStripes, range, widthState]);
 
     return (
         <div className="stripes-container">

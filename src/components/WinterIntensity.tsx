@@ -12,6 +12,16 @@ export function WinterIntensity({ data }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
     const [dateRange, setDateRange] = useState<[Date, Date] | null>(null);
+    const [widthState, setWidthState] = useState(0);
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (containerRef.current) setWidthState(containerRef.current.clientWidth);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const winterData = useMemo(() => {
         // Filter for winter months (Nov, Dec, Jan, Feb, Mar)
@@ -171,7 +181,7 @@ export function WinterIntensity({ data }: Props) {
         g.append("text").attr("x", 0).attr("y", -10).text("❄️ Historical Snow Accumulation (Inches)").style("fill", "white").style("font-size", "0.75rem").style("font-weight", "bold");
         g.append("text").attr("x", width).attr("y", -10).attr("text-anchor", "end").text("🌡️ Daily Minimums (°F)").style("fill", "#ff3e3e").style("font-size", "0.75rem").style("font-weight", "bold");
 
-    }, [winterData, dateRange]);
+    }, [winterData, dateRange, widthState]);
 
     return (
         <div ref={containerRef} className="winter-intensity-container glass-panel">

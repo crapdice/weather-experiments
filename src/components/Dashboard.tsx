@@ -118,6 +118,13 @@ export function Dashboard() {
             help="The latest temperature reading from KORD via Open-Meteo."
           />
           <MetricCard
+            label="Real-time Precip"
+            value={stats?.currentPrecip !== undefined ? `${stats.currentPrecip.toFixed(2)}"` : '--"'}
+            delta="Current Intensity"
+            accent="primary"
+            help="The latest precipitation reading from KORD (Rain + Snow) in inches."
+          />
+          <MetricCard
             label="All-Time Max"
             value={`${stats?.maxTemp.toFixed(1)}°F`}
             delta={stats?.maxTempDate.getFullYear().toString()}
@@ -203,6 +210,8 @@ export function Dashboard() {
           gap: 40px;
           max-width: 1400px;
           margin: 0 auto;
+          width: 100%;
+          min-width: 0;
         }
 
         .header {
@@ -299,7 +308,7 @@ export function Dashboard() {
             gap: 24px;
           }
           .title {
-            font-size: 2.2rem;
+            font-size: clamp(1.5rem, 10vw, 2.2rem);
           }
           .subtitle {
             font-size: 0.9rem;

@@ -35,22 +35,26 @@ export function MetricCard({ label, value, delta, help, accent = 'primary' }: Me
           border-color: ${accentColor};
         }
 
+        .metric-label {
           font-size: 0.75rem;
           text-transform: uppercase;
           color: var(--text-secondary);
           letter-spacing: 0.5px;
           font-weight: 700;
+          word-break: break-word;
         }
 
         .metric-value {
           font-size: 1.5rem;
           font-weight: 800;
           color: ${accentColor};
+          white-space: nowrap;
         }
 
         .metric-delta {
           font-size: 0.8rem;
           color: var(--text-secondary);
+          word-break: break-word;
         }
 
         @media (max-width: 768px) {

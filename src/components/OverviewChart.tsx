@@ -28,6 +28,21 @@ export function OverviewChart({ data }: Props) {
     const [trendLine, setTrendLine] = useState<{ p1: { date: Date, val: number }, p2: { date: Date, val: number } } | null>(null);
     const [showRain, setShowRain] = useState(false);
     const [showSnow, setShowSnow] = useState(false);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (containerRef.current) {
+                setDimensions({
+                    width: containerRef.current.clientWidth,
+                    height: containerRef.current.clientHeight
+                });
+            }
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Initialize date range to "1Y" on load
     useEffect(() => {
@@ -543,7 +558,7 @@ export function OverviewChart({ data }: Props) {
         return () => {
             tooltip.remove();
         };
-    }, [data, dateRange, trendLine, isDrawMode, showRain, showSnow]);
+    }, [data, dateRange, trendLine, isDrawMode, showRain, showSnow, dimensions.width]);
 
     const getMoonEmoji = (phase: number) => {
         if (phase < 0.05 || phase > 0.95) return '🌑';

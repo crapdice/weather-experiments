@@ -30,6 +30,7 @@ export interface ClimateStats {
     decadalDelta: number;
     lastUpdate: Date;
     currentTemp?: number;
+    currentPrecip?: number;
     currentTempTime?: Date;
 }
 
@@ -95,21 +96,22 @@ export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats
     return { data, stats };
 }
 
-async function fetchCurrentTemp(): Promise<{ temp: number, time: Date } | undefined> {
+async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, time: Date } | undefined> {
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&current=temperature_2m&temperature_unit=fahrenheit&timezone=America%2FChicago`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&current=temperature_2m,precipitation&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FChicago`;
         const res = await fetch(url);
         if (res.ok) {
             const json = await res.json();
             if (json.current && json.current.temperature_2m !== undefined) {
                 return {
                     temp: json.current.temperature_2m,
+                    precip: json.current.precipitation || 0,
                     time: new Date(json.current.time)
                 };
             }
         }
     } catch (e) {
-        console.error("Failed to fetch current temp:", e);
+        console.error("Failed to fetch current weather:", e);
     }
     return undefined;
 }
@@ -189,9 +191,10 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
         console.error("Historical precip fetch failed:", e);
     }
 
-    const currentInfo = await fetchCurrentTemp();
+    const currentInfo = await fetchCurrentWeather();
     if (currentInfo) {
         result.stats.currentTemp = currentInfo.temp;
+        result.stats.currentPrecip = currentInfo.precip;
         result.stats.currentTempTime = currentInfo.time;
     }
 
@@ -199,7 +202,7 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
 }
 
 export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
-    const currentInfo = await fetchCurrentTemp();
+    const currentInfo = await fetchCurrentWeather();
     try {
         // Use Forecast API with past_days=7 for more reliable real-time updates
         const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,rain_sum,snowfall_sum&temperature_unit=fahrenheit&timezone=America%2FChicago&past_days=7&forecast_days=1`;
@@ -248,7 +251,7 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
     }
 }
 
-function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, time: Date }): { data: WeatherRecord[], stats: ClimateStats } {
+function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, precip: number, time: Date }): { data: WeatherRecord[], stats: ClimateStats } {
     const todayStr = new Date().toISOString().split('T')[0];
     const hasToday = data.some(d => d.Date.toISOString().split('T')[0] === todayStr);
 
@@ -275,6 +278,7 @@ function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, 
         })));
 
         result.stats.currentTemp = currentInfo.temp;
+        result.stats.currentPrecip = currentInfo.precip;
         result.stats.currentTempTime = currentInfo.time;
         return result;
     }
@@ -282,6 +286,7 @@ function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, 
     const stats = calculateStats(data);
     if (currentInfo) {
         stats.currentTemp = currentInfo.temp;
+        stats.currentPrecip = currentInfo.precip;
         stats.currentTempTime = currentInfo.time;
     }
     return { data, stats };
