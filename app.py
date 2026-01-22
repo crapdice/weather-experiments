@@ -14,56 +14,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Custom CSS ---
-st.markdown("""
-<style>
-    [data-testid="stMetric"] {
-        background: rgba(255, 255, 255, 0.03);
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(8px);
-    }
-    .header-text {
-        font-family: 'Inter', sans-serif;
-        font-weight: 800;
-        background: -webkit-linear-gradient(#00D2FF, #3a7bd5);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3.5rem;
-        margin-bottom: 0px;
-    }
-    .pulse-widget {
-        background: rgba(0, 242, 96, 0.05);
-        border: 1px solid rgba(0, 242, 96, 0.2);
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
-    .diagnostic {
-        font-size: 0.7rem;
-        color: #8892b0;
-        background: rgba(255, 255, 255, 0.02);
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .lab-title {
-        color: #FDBB2D;
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin-bottom: 10px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # --- Data Loading & Sanitization ---
 @st.cache_data
 def load_data():
-    csv_path = "chicago_weather_50years.csv"
-    if os.path.exists(csv_path):
-        df = pd.read_csv(csv_path)
-        df['Date'] = pd.to_datetime(df['Date'])
+    parquet_path = "chicago_weather_50years.parquet"
+    if os.path.exists(parquet_path):
+        df = pd.read_parquet(parquet_path)
+        df['Date'] = pd.to_datetime(df['Date']).dt.floor('D')
         
         # --- Check for Freshness ---
         latest_record = df['Date'].max().date()
@@ -76,13 +33,13 @@ def load_data():
                 if not new_records.empty:
                     new_records['Date'] = pd.to_datetime(new_records['Date'])
                     df = pd.concat([df, new_records]).drop_duplicates(subset=['Date'])
-                    df.to_csv(csv_path, index=False)
+                    df.to_parquet(parquet_path, index=False)
                     st.toast(f"Synchronized {len(new_records)} new records!", icon="🔄")
     else:
         with st.spinner("Accessing Historical Archive..."):
             df = fetch_chicago_weather()
             df['Date'] = pd.to_datetime(df['Date'])
-            df.to_csv(csv_path, index=False)
+            df.to_parquet(parquet_path, index=False)
     
     df = df.dropna(subset=['Date'])
     df = df.sort_values('Date')
@@ -107,9 +64,54 @@ def load_data():
     
     return df
 
-all_data = load_data()
+# --- Theme Logic ---
+themes = {
+    "Cyber-Ice": {
+        "page_bg": "#0B0E14",
+        "component_bg": "rgba(255, 255, 255, 0.03)",
+        "accent_1": "#00D2FF",
+        "accent_2": "#FF4B2B",
+        "trend_line": "#00F260",
+        "ro_line": "#FDBB2D",
+        "text": "#FFFFFF",
+        "sub_text": "#8892b0",
+        "plotly_template": "plotly_dark",
+        "font": "'Inter', sans-serif"
+    },
+    "Solar-Paper": {
+        "page_bg": "#F4ECD8",
+        "component_bg": "rgba(0, 0, 0, 0.05)",
+        "accent_1": "#268BD2",
+        "accent_2": "#CB4B16",
+        "trend_line": "#859900",
+        "ro_line": "#DC322F",
+        "text": "#073642",
+        "sub_text": "#586E75",
+        "plotly_template": "plotly_white",
+        "font": "'Playfair Display', serif"
+    },
+    "Emerald-Grid": {
+        "page_bg": "#061106",
+        "component_bg": "rgba(85, 255, 85, 0.05)",
+        "accent_1": "#55FF55",
+        "accent_2": "#FFB000",
+        "trend_line": "#ADFF2F",
+        "ro_line": "#FFD700",
+        "text": "#55FF55",
+        "sub_text": "#00A300",
+        "plotly_template": "plotly_dark",
+        "font": "'Courier New', monospace"
+    }
+}
 
-# --- Global Diagnostics ---
+def hex_to_rgba(hex_color, alpha):
+    hex_color = hex_color.lstrip('#')
+    lv = len(hex_color)
+    rgb = tuple(int(hex_color[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+    return f"rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {alpha})"
+
+# --- Global Configuration & Data Loading ---
+all_data = load_data()
 max_d = all_data['Date'].max()
 min_d = all_data['Date'].min()
 hist_max = all_data['Max Temp (°F)'].max()
@@ -118,21 +120,176 @@ hist_min = all_data['Min Temp (°F)'].min()
 hist_min_date = all_data.loc[all_data['Min Temp (°F)'].idxmin(), 'Date']
 pulse_delta = all_data['Avg Temp (°F)'].tail(30).mean() - all_data['Avg Temp (°F)'].mean()
 
-# --- Sidebar ---
-st.sidebar.title("Operational Controls")
-app_mode = st.sidebar.selectbox("Analysis View", ["Historical Overview", "Yearly Comparison", "Climate Lab (Beta)"])
+# --- New Enhanced Benchmarks ---
+frost_days = len(all_data[all_data['Min Temp (°F)'] < 0])
+heat_days = len(all_data[all_data['Max Temp (°F)'] > 95])
+volatility = all_data['Avg Temp (°F)'].diff().abs().mean()
+first_decade = all_data[all_data['Year'] <= 1984]['Avg Temp (°F)'].mean()
+last_decade = all_data[all_data['Year'] >= 2016]['Avg Temp (°F)'].mean()
+decadal_delta = last_decade - first_decade
 
+# --- Theme Logic (Global Persistence) ---
+if 'theme_choice' not in st.session_state:
+    st.session_state.theme_choice = "Cyber-Ice"
+
+# Ensure 't' and 'theme_choice' are available immediately based on current state
+theme_choice = st.session_state.theme_choice
+t = themes[theme_choice]
+
+# --- Sidebar Initialization ---
 with st.sidebar:
+    st.title("Operational Controls")
+    app_mode = st.selectbox("Analysis View", ["Historical Overview", "Yearly Comparison", "Climate Lab (Beta)"])
+    st.divider()
+    
     st.markdown("### System Diagnostics")
+    start_str = min_d.date() if pd.notnull(min_d) else "N/A"
+    end_str = max_d.date() if pd.notnull(max_d) else "N/A"
+    recs = len(all_data) if not all_data.empty else 0
+    
     st.markdown(f"""
     <div class="diagnostic">
-    <b>Archive Start:</b> {min_d.date()}<br>
-    <b>Archive End:</b> {max_d.date()}<br>
-    <b>Records:</b> {len(all_data):,}<br>
+    <b>Archive Start:</b> {start_str}<br>
+    <b>Archive End:</b> {end_str}<br>
+    <b>Records:</b> {recs:,}<br>
     <b>Format:</b> High-Fidelity Time Series
     </div>
     """, unsafe_allow_html=True)
+    
     st.divider()
+    with st.expander("🎓 Climate Intelligence Primer"):
+        st.markdown(f"""
+        <div class="intelligence-item">
+            <b>Seasonal Normals</b><br>
+            The grey/translucent background area represents the 50-year range of "typical" temperatures for that specific day of the year.<br><br>
+            
+            <b>7-Day SMA</b><br>
+            Simple Moving Average. Smooths daily noise to reveal immediate momentum.<br><br>
+            
+            <b>YoY ROC</b><br>
+            Rate of Change. Compares today's temperature directly to the exact same day 365 days ago.<br><br>
+            
+            <b>Climate Pulse</b><br>
+            Compares the last 30 days of weather against the entire 50-year historical baseline for those same days.
+        </div>
+        """, unsafe_allow_html=True)
+    st.divider()
+
+    st.markdown("### Aesthetic Style")
+    current_index = ["Cyber-Ice", "Solar-Paper", "Emerald-Grid"].index(st.session_state.theme_choice)
+    new_theme = st.radio(
+        "UI Theme", 
+        ["Cyber-Ice", "Solar-Paper", "Emerald-Grid"], 
+        index=current_index,
+        help="Select the interface aesthetic."
+    )
+    if new_theme != st.session_state.theme_choice:
+        st.session_state.theme_choice = new_theme
+        st.rerun()
+
+# Inject Theme CSS
+st.markdown(f"""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Playfair+Display:ital,wght@0,400;0,800;1,400&display=swap');
+    
+    .stApp {{
+        background-color: {t['page_bg']} !important;
+        color: {t['text']} !important;
+    }}
+    [data-testid="stMetric"] {{
+        background: {t['component_bg']};
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid {t['accent_1']}33;
+        backdrop-filter: blur(8px);
+    }}
+    [data-testid="stMetricValue"] > div {{
+        color: {t['text']} !important;
+    }}
+    [data-testid="stMetricLabel"] > div {{
+        color: {t['sub_text']} !important;
+    }}
+    .header-text {{
+        font-family: {t['font']};
+        font-weight: 800;
+        color: {t['accent_1']};
+        {f'background: -webkit-linear-gradient({t["accent_1"]}, {t["accent_2"]}); -webkit-background-clip: text; -webkit-text-fill-color: transparent;' if theme_choice == "Cyber-Ice" else ''}
+        font-size: 3.5rem;
+        margin-bottom: 0px;
+    }}
+    .pulse-widget {{
+        background: {t['component_bg']};
+        border: 1px solid {t['accent_1']}66;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }}
+    .diagnostic {{
+        font-size: 0.7rem;
+        color: {t['sub_text']};
+        background: {t['component_bg']};
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid {t['accent_1']}1A;
+    }}
+    .lab-title {{
+        color: {t['ro_line']};
+        font-family: {t['font']} !important;
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }}
+    /* REFACTORED: Targeted Typography - Avoids breaking Streamlit internals */
+    .header-text, .lab-title, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {{
+        font-family: {t['font']} !important;
+        color: {t['accent_1']} !important;
+    }}
+    .diagnostic, .intelligence-item, .pulse-widget span {{
+        font-family: {t['font']} !important;
+        color: {t['text']} !important;
+    }}
+    .intelligence-item {{
+        font-size: 0.9rem;
+    }}
+    [data-testid="stHeader"] {{
+        background-color: rgba(0,0,0,0);
+    }}
+    [data-testid="stSidebar"] {{
+        background-color: {t['page_bg']} !important;
+        border-right: 1px solid {hex_to_rgba(t['accent_1'], 0.2)} !important;
+    }}
+    /* Specific input component label fixes */
+    [data-testid="stSidebar"] label, [data-testid="stSidebar"] .stRadio p {{
+        color: {t['accent_1']} !important;
+        font-family: {t['font']} !important;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        font-weight: bold;
+    }}
+    /* Input component styling */
+    div[data-baseweb="radio"] *, div[data-baseweb="select"] * {{
+        color: {t['text']} !important;
+        background-color: transparent !important;
+        font-family: {t['font']} !important;
+    }}
+    div[data-testid="stExpander"] {{
+        background: {t['component_bg']};
+        border: 1px solid {hex_to_rgba(t['accent_1'], 0.1)};
+        border-radius: 8px;
+    }}
+    /* Fix Expander Icon visibility and alignment */
+    [data-testid="stExpander"] svg {{
+        fill: {t['accent_1']} !important;
+    }}
+    /* Clean up the range slider handle area */
+    .stSlider [data-testid="stMarkdownContainer"] p {{
+        color: {t['sub_text']} !important;
+    }}
+    hr {{
+        border-color: {hex_to_rgba(t['accent_1'], 0.2)} !important;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # --- Header ---
 col_h1, col_h2 = st.columns([2, 1])
@@ -142,12 +299,12 @@ with col_h1:
 with col_h2:
     status_label = "WARMER" if pulse_delta > 0 else "COOLER"
     st.markdown(f"""
-    <div class="pulse-widget">
-        <span style="color: #8892b0; font-size: 0.8rem; text-transform: uppercase;">Climate Pulse (30d)</span><br>
-        <span style="font-size: 1.2rem; font-weight: bold; color: {'#FF4B2B' if pulse_delta > 0 else '#00D2FF'};">
+    <div class="pulse-widget" title="Climate Pulse tracks short-term momentum. A negative value indicates the last 30 days were cooler than the 50-year seasonal norm.">
+        <span style="color: {t['sub_text']}; font-size: 0.8rem; text-transform: uppercase;">Climate Pulse (30d)</span><br>
+        <span style="font-size: 1.2rem; font-weight: bold; color: {'#FF4B2B' if pulse_delta > 0 else t['accent_1']};">
             {pulse_delta:+.2f}°F {status_label}
         </span><br>
-        <span style="color: #8892b0; font-size: 0.7rem;">Relative to 50y Baseline</span>
+        <span style="color: {t['sub_text']}; font-size: 0.7rem;">Relative to 50y Baseline</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -167,28 +324,29 @@ if app_mode == "Historical Overview":
 
     # Core Traces
     fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['Mean Low (°F)'], line=dict(width=0), showlegend=False), row=1, col=1)
-    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['Mean High (°F)'], fill='tonexty', fillcolor='rgba(255, 255, 255, 0.05)', line=dict(width=0), name='Seasonal Range'), row=1, col=1)
-    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['Mean High (°F)'], name='Mean High', line=dict(color='#FF4B2B', width=1.5)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['Mean Low (°F)'], name='Mean Low', line=dict(color='#00D2FF', width=1.5)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['Avg Temp (°F)'], name='Daily Mean', line=dict(color='#A0A0A0', width=2)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['7-day SMA'], name='7d SMA', line=dict(color='#00F260', width=2)), row=2, col=1)
-    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['1-year ROC'], name='YoY ROC', line=dict(color='#FDBB2D', width=1.5), fill='tozeroy', fillcolor='rgba(253, 187, 45, 0.05)'), row=3, col=1)
+    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['Mean High (°F)'], fill='tonexty', fillcolor=hex_to_rgba(t['text'], 0.1), line=dict(width=0), name='Seasonal Range'), row=1, col=1)
+    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['Mean High (°F)'], name='Mean High', line=dict(color=t['accent_2'], width=1.5)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['Mean Low (°F)'], name='Mean Low', line=dict(color=t['accent_1'], width=1.5)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['Avg Temp (°F)'], name='Daily Mean', line=dict(color=t['sub_text'], width=2)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['7-day SMA'], name='7d SMA', line=dict(color=t['trend_line'], width=2)), row=2, col=1)
+    fig.add_trace(go.Scatter(x=all_data['Date'], y=all_data['1-year ROC'], name='YoY ROC', line=dict(color=t['ro_line'], width=1.5), fill='tozeroy', fillcolor=hex_to_rgba(t['ro_line'], 0.1)), row=3, col=1)
 
     # Annotations
-    fig.add_annotation(x=hist_max_date, y=hist_max, text="MAX RECORD", showarrow=True, arrowhead=1, bgcolor="#FF4B2B", row=1, col=1)
-    fig.add_annotation(x=hist_min_date, y=hist_min, text="MIN RECORD", showarrow=True, arrowhead=1, bgcolor="#00D2FF", row=1, col=1)
+    fig.add_annotation(x=hist_max_date, y=hist_max, text="MAX RECORD", showarrow=True, arrowhead=1, bgcolor=t['accent_2'], row=1, col=1)
+    fig.add_annotation(x=hist_min_date, y=hist_min, text="MIN RECORD", showarrow=True, arrowhead=1, bgcolor=t['accent_1'], row=1, col=1)
 
     # Area Annotation
-    latest_val = all_data.iloc[-1]
-    if pd.notnull(latest_val['1-year ROC']):
-        temp_1y_ago = latest_val['Avg Temp (°F)'] - latest_val['1-year ROC']
-        fig.add_annotation(
-            x=latest_val['Date'], y=latest_val['1-year ROC'], 
-            text=f"1Y AGO: {temp_1y_ago:.1f}°F", 
-            showarrow=True, arrowhead=1, ax=-50, ay=-40,
-            bgcolor="#FDBB2D", font=dict(color="black", size=10),
-            row=3, col=1
-        )
+    if not all_data.empty:
+        latest_val = all_data.iloc[-1]
+        if pd.notnull(latest_val['1-year ROC']):
+            temp_1y_ago = latest_val['Avg Temp (°F)'] - latest_val['1-year ROC']
+            fig.add_annotation(
+                x=latest_val['Date'], y=latest_val['1-year ROC'], 
+                text=f"1Y AGO: {temp_1y_ago:.1f}°F", 
+                showarrow=True, arrowhead=1, ax=-50, ay=-40,
+                bgcolor=t['ro_line'], font=dict(color="black" if theme_choice == "Solar-Paper" else "white", size=10),
+                row=3, col=1
+            )
 
     fig.update_xaxes(
         row=1, col=1, showticklabels=True, 
@@ -220,8 +378,12 @@ if app_mode == "Historical Overview":
     )
 
     fig.update_layout(
-        height=1330, template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', 
-        plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=150, b=50), hovermode="x unified"
+        height=1330, template=t['plotly_template'], paper_bgcolor='rgba(0,0,0,0)', 
+        plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=150, b=50), hovermode="x unified",
+        yaxis_autorange=True, yaxis2_autorange=True, yaxis3_autorange=True,
+        font=dict(family=t['font'], color=t['text']),
+        hoverlabel=dict(bgcolor=t['page_bg'], font_size=12, font_family=t['font'], font_color=t['text']),
+        legend=dict(font=dict(color=t['text']))
     )
     
     # DEFAULT VIEW: Last 1 Year
@@ -232,19 +394,25 @@ if app_mode == "Historical Overview":
 
 elif app_mode == "Yearly Comparison":
     years = sorted(all_data['Year'].unique(), reverse=True)
-    year_1 = st.sidebar.selectbox("Primary Year", years, index=0)
-    year_2 = st.sidebar.selectbox("Base Year", years, index=len(years)-1)
+    st.markdown('<p class="lab-title">Comparative Analysis Tool</p>', unsafe_allow_html=True)
+    col_sel1, col_sel2 = st.columns(2)
+    with col_sel1:
+        year_1 = st.selectbox("Primary Year", years, index=0)
+    with col_sel2:
+        year_2 = st.selectbox("Base Year", years, index=len(years)-1)
 
     df1 = all_data[all_data['Year'] == year_1].copy()
     df2 = all_data[all_data['Year'] == year_2].copy()
     
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df1['DayOfYear'], y=df1['Avg Temp (°F)'], name=f"{year_1}", line=dict(color='#FF4B2B', width=2)))
-    fig.add_trace(go.Scatter(x=df2['DayOfYear'], y=df2['Avg Temp (°F)'], name=f"{year_2}", line=dict(color='#00D2FF', width=2, dash='dash')))
+    fig.add_trace(go.Scatter(x=df1['DayOfYear'], y=df1['Avg Temp (°F)'], name=f"{year_1}", line=dict(color=t['accent_2'], width=2)))
+    fig.add_trace(go.Scatter(x=df2['DayOfYear'], y=df2['Avg Temp (°F)'], name=f"{year_2}", line=dict(color=t['accent_1'], width=2, dash='dash')))
     fig.update_layout(
         title=f"Comparative Profile: {year_1} vs {year_2}",
         xaxis_title="Day of Year", yaxis_title="Temp (°F)",
-        template="plotly_dark", height=600, hovermode="x unified"
+        template=t['plotly_template'], height=600, hovermode="x unified",
+        font=dict(family=t['font']),
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -265,7 +433,7 @@ else:
             z=pivot_df.values, 
             x=pivot_df.columns, 
             y=pivot_df.index,
-            colorscale='Viridis'
+            colorscale='Viridis' if theme_choice != "Solar-Paper" else 'Portland'
         )])
         fig.update_layout(
             scene=dict(
@@ -274,7 +442,9 @@ else:
                 zaxis_title='Temp (°F)',
                 camera=dict(eye=dict(x=1.5, y=1.5, z=1.2))
             ),
-            height=800, template="plotly_dark", margin=dict(l=0, r=0, b=0, t=40)
+            height=800, template=t['plotly_template'], margin=dict(l=0, r=0, b=0, t=40),
+            font=dict(family=t['font']),
+            paper_bgcolor='rgba(0,0,0,0)'
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -295,10 +465,12 @@ else:
             ))
         fig.update_layout(
             polar=dict(
-                radialaxis=dict(visible=True, range=[-20, 100], ticksuffix="°F"),
-                angularaxis=dict(tickvals=[0, 90, 180, 270], ticktext=["Jan", "Apr", "Jul", "Oct"])
+                radialaxis=dict(visible=True, range=[-20, 100], ticksuffix="°F", gridcolor=hex_to_rgba(t['sub_text'], 0.2)),
+                angularaxis=dict(tickvals=[0, 90, 180, 270], ticktext=["Jan", "Apr", "Jul", "Oct"], gridcolor=hex_to_rgba(t['sub_text'], 0.2))
             ),
-            height=800, template="plotly_dark"
+            height=800, template=t['plotly_template'],
+            font=dict(family=t['font']),
+            paper_bgcolor='rgba(0,0,0,0)'
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -335,7 +507,9 @@ else:
             hovertemplate="<b>%{customdata[0]}</b><br>Avg: %{customdata[1]:.2f}°F<br>Anomaly: %{marker.color:+.2f}°F<extra></extra>"
         ))
         fig.update_layout(
-            height=550, template="plotly_dark",
+            height=550, template=t['plotly_template'],
+            font=dict(family=t['font']),
+            paper_bgcolor='rgba(0,0,0,0)',
             xaxis=dict(
                 showgrid=False, 
                 title="Timeline (1974 - 2026)",
@@ -350,7 +524,7 @@ else:
                         dict(step="all", label="ALL")
                     ]),
                     y=1.1, x=0.5, xanchor="center",
-                    bgcolor="rgba(255, 255, 255, 0.1)", font=dict(color="white")
+                    bgcolor=t['component_bg'], font=dict(color=t['text'])
                 )
             ),
             yaxis=dict(showgrid=False, showticklabels=False),
@@ -360,11 +534,17 @@ else:
 
 # --- Regional Benchmarks ---
 st.markdown("### Historical Benchmarks")
-col1, col2, col3, col4 = st.columns(4)
-with col1: st.metric("All-Time Max", f"{hist_max:.1f}°F", f"{hist_max_date.strftime('%Y')}")
-with col2: st.metric("All-Time Min", f"{hist_min:.1f}°F", f"{hist_min_date.strftime('%Y')}")
-with col3: st.metric("Rolling 30d Avg", f"{all_data['Avg Temp (°F)'].tail(30).mean():.1f}°F")
-with col4: st.metric("Climate Pulse", f"{pulse_delta:+.2f}°F", "Delta vs 50y Baseline")
+col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+with col_b1: st.metric("All-Time Max", f"{hist_max:.1f}°F", f"{hist_max_date.strftime('%Y')}", help="The highest daily maximum temperature recorded at KORD between 1974 and today.")
+with col_b2: st.metric("All-Time Min", f"{hist_min:.1f}°F", f"{hist_min_date.strftime('%Y')}", help="The lowest daily minimum temperature recorded at KORD between 1974 and today.")
+with col_b3: st.metric("Rolling 30d Avg", f"{all_data['Avg Temp (°F)'].tail(30).mean():.1f}°F", help="The arithmetic mean of the 'Daily Average Temperature' for the most recent 30 records.")
+with col_b4: st.metric("Climate Pulse", f"{pulse_delta:+.2f}°F", "Delta vs 50y Baseline", help="The climatological anomaly: compares the last 30 days against the 50-year average for those same calendar days.")
+
+col_b5, col_b6, col_b7, col_b8 = st.columns(4)
+with col_b5: st.metric("Extreme Frost", f"{frost_days}", "Days < 0°F", help="Total number of days in the 50-year archive where the temperature dropped below zero.")
+with col_b6: st.metric("Extreme Heat", f"{heat_days}", "Days > 95°F", help="Total number of days in the 50-year archive where the temperature exceeded 95°F.")
+with col_b7: st.metric("Volatility Index", f"{volatility:.2f}°F", "Avg Daily Δ", help="The average absolute change in temperature from one day to the next across all 50 years.")
+with col_b8: st.metric("Decadal Shift", f"{decadal_delta:+.2f}°F", "2020s vs 1970s", help="The difference in average temperature between the most recent decade (2016-2025) and the first decade of records (1974-1984).")
 
 st.divider()
 st.caption("KORD Intel Sandbox | Innovation & Reliability")

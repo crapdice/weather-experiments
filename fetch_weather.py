@@ -27,6 +27,9 @@ def fetch_chicago_weather(start_date="1974-01-01", end_date=None):
     
     responses = openmeteo.weather_api(url, params=params)
 
+    if not responses:
+        return pd.DataFrame()
+
     # Process first location. Add a for-loop for multiple locations or weather models
     response = responses[0]
 
@@ -62,6 +65,6 @@ if __name__ == "__main__":
     print(weather_df.head())
     print(weather_df.tail())
     print(f"Total records: {len(weather_df)}")
-    # Save to CSV for caching/verification
-    weather_df.to_csv("chicago_weather_50years.csv", index=False)
-    print("Data saved to chicago_weather_50years.csv")
+    # Save to Parquet for caching/verification
+    weather_df.to_parquet("chicago_weather_50years.parquet", index=False)
+    print("Data saved to chicago_weather_50years.parquet")

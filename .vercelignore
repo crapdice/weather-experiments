@@ -1,0 +1,9 @@
+.git
+.cache
+.streamlit
+chicago_weather_50years.csv
+trigger_update.py
+audit_*.py
+verify_accuracy.py
+audit_results.txt
+*.md
