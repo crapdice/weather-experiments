@@ -1,5 +1,6 @@
 [phases.setup]
-nixPkgs = ['nodejs_22']
+archive = '7a339d87931bba829f68e94621536cad9132971a'
+nixPkgs = ['nodejs']
 
 [phases.install]
 cmds = ['cd next-app && npm install']
