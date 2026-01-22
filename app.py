@@ -398,7 +398,7 @@ def generate_main_css(t, theme_choice):
         /* (Streamlit doesn't allow easy class tagging of specific charts, so we rely on global behavior) */
         
         /* v0.8.1: Hide Historical Benchmarks on Mobile */
-        /* We target the specific header anchor and all following siblings */
+        /* Target the specific header anchor and all following siblings */
         h2#benchmarks {{
             display: none !important;
         }}
@@ -409,14 +409,6 @@ def generate_main_css(t, theme_choice):
             display: none !important;
         }}
     }}
-    
-    /* v0.8.1: Hide Historical Benchmarks on Mobile */
-    /* Target the specific header anchor and all following siblings (metrics, footer) */
-    @media (max-width: 768px) {
-        h2#benchmarks { display: none !important; }
-        h2#benchmarks ~ div { display: none !important; }
-        h2#benchmarks ~ hr { display: none !important; }
-    }
     </style>
 """
     return css
