@@ -4,6 +4,6 @@
         "builder": "NIXPACKS"
     },
     "deploy": {
-        "root": "/next-app"
+        "root": "next-app"
     }
 }
