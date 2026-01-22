@@ -17,9 +17,9 @@ st.set_page_config(
 # --- Data Loading & Sanitization ---
 @st.cache_data
 def load_data():
-    parquet_path = "chicago_weather_50years.parquet"
-    if os.path.exists(parquet_path):
-        df = pd.read_parquet(parquet_path)
+    csv_path = "chicago_weather_50years.csv"
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path)
         df['Date'] = pd.to_datetime(df['Date']).dt.floor('D')
         
         # --- Check for Freshness ---
@@ -33,13 +33,13 @@ def load_data():
                 if not new_records.empty:
                     new_records['Date'] = pd.to_datetime(new_records['Date'])
                     df = pd.concat([df, new_records]).drop_duplicates(subset=['Date'])
-                    df.to_parquet(parquet_path, index=False)
+                    df.to_csv(csv_path, index=False)
                     st.toast(f"Synchronized {len(new_records)} new records!", icon="🔄")
     else:
         with st.spinner("Accessing Historical Archive..."):
             df = fetch_chicago_weather()
             df['Date'] = pd.to_datetime(df['Date'])
-            df.to_parquet(parquet_path, index=False)
+            df.to_csv(csv_path, index=False)
     
     df = df.dropna(subset=['Date'])
     df = df.sort_values('Date')
