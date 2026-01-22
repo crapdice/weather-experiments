@@ -6,6 +6,7 @@ import { MetricCard } from './MetricCard';
 import { OverviewChart } from './OverviewChart';
 import { ComparisonChart } from './ComparisonChart';
 import { ClimateStripes } from './ClimateStripes';
+import { ThermalTopo } from './ThermalTopo';
 import { loadWeatherData, WeatherRecord, ClimateStats } from '@/utils/weatherData';
 
 export function Dashboard() {
@@ -123,11 +124,12 @@ export function Dashboard() {
             <div className="lab-container">
               <div className="lab-tabs">
                 <button className={labTab === 'stripes' ? 'active' : ''} onClick={() => setLabTab('stripes')}>Climate Stripes</button>
+                <button className={labTab === 'topo' ? 'active' : ''} onClick={() => setLabTab('topo')}>3D Thermal Topo</button>
                 <button disabled title="Coming soon">Radial Compass</button>
-                <button disabled title="Coming soon">Thermal Topo</button>
               </div>
               <div className="lab-content">
                 {labTab === 'stripes' && data.length > 0 && <ClimateStripes data={data} />}
+                {labTab === 'topo' && data.length > 0 && <ThermalTopo data={data} />}
               </div>
             </div>
           )}
