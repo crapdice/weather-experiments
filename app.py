@@ -4,10 +4,41 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 import os
+import requests
+import requests_cache
+from retry_requests import retry
 from fetch_weather import fetch_chicago_weather
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
-# --- Page Configuration ---
+# --- Helper Functions ---
+def calculate_time_range(selection, max_date):
+    """
+    Calculate the start date based on the selection timeframe.
+    """
+    if selection == "ALL":
+        return None
+    elif selection == "1M":
+        return max_date - relativedelta(months=1)
+    elif selection == "6M":
+        return max_date - relativedelta(months=6)
+    elif selection == "YTD":
+        return date(max_date.year, 1, 1)
+    elif selection == "1Y":
+        return max_date - relativedelta(years=1)
+    elif selection == "3Y":
+        return max_date - relativedelta(years=3)
+    elif selection == "5Y":
+        return max_date - relativedelta(years=5)
+    elif selection == "10Y":
+        return max_date - relativedelta(years=10)
+    elif selection == "15Y":
+        return max_date - relativedelta(years=15)
+    elif selection == "7D":
+        return max_date - timedelta(days=7)
+    return None
+
+# --- Configuration ---
 st.set_page_config(
     page_title="Chicago O'Hare Weather Intelligence",
     page_icon="🌡️",
@@ -419,27 +450,20 @@ if app_mode == "Historical Overview":
         showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)', type="date"
     )
 
+    # Timeframe Controls (Native Streamlit for Mobile Responsiveness)
+    timeframe_options = ["1Y", "3Y", "5Y", "10Y", "15Y", "YTD", "1M", "6M", "ALL"]
+    col_tf1, col_tf2 = st.columns([1, 4])
+    with col_tf1:
+        selected_timeframe = st.selectbox("Timeframe", timeframe_options, index=0, label_visibility="collapsed")
+    
+    # Calculate start date
+    start_date = calculate_time_range(selected_timeframe, max_d)
+    
     fig.update_xaxes(
         row=3, col=1, type="date",
         showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)',
-        rangeslider=dict(visible=True, thickness=0.04),
-        rangeselector=dict(
-            buttons=list([
-                dict(count=7, label="7D", step="day", stepmode="backward"),
-                dict(count=1, label="1M", step="month", stepmode="backward"),
-                dict(count=6, label="6M", step="month", stepmode="backward"),
-                dict(count=1, label="YTD", step="year", stepmode="todate"),
-                dict(count=1, label="1Y", step="year", stepmode="backward"),
-                dict(count=3, label="3Y", step="year", stepmode="backward"),
-                dict(count=5, label="5Y", step="year", stepmode="backward"),
-                dict(count=10, label="10Y", step="year", stepmode="backward"),
-                dict(count=15, label="15Y", step="year", stepmode="backward"),
-                dict(step="all", label="ALL")
-            ]),
-            y=1.1, x=0.5, xanchor="center",
-            bgcolor="rgba(255, 255, 255, 0.1)", font=dict(color="white"),
-            activecolor="#3a7bd5"
-        )
+        rangeslider=dict(visible=True, thickness=0.05),
+        # Removed overlapping Plotly rangeselector buttons
     )
 
     fig.update_layout(
@@ -451,9 +475,14 @@ if app_mode == "Historical Overview":
         legend=dict(font=dict(color=t['text']))
     )
     
-    # DEFAULT VIEW: Last 1 Year
-    one_year_ago = max_d - timedelta(days=365)
-    fig.update_xaxes(range=[one_year_ago, max_d], row=3, col=1)
+    # Apply Timeframe Filter
+    if start_date:
+        fig.update_xaxes(range=[start_date, max_d], row=3, col=1)
+        # Also apply to chart 1 and 2 if shared_xaxes=True (it is)
+        # But rangeslider on chart 3 controls the view.
+        # Let's set it explicitly for consistency.
+        fig.update_xaxes(range=[start_date, max_d], row=1, col=1)
+        fig.update_xaxes(range=[start_date, max_d], row=2, col=1)
     
     st.plotly_chart(fig, use_container_width=True)
 
