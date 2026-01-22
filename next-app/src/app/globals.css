@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Playfair+Display:ital,wght@0,400;0,800;1,400&family=Courier+Prime:wght@400;700&display=swap');
+
+:root {
+  /* Default: Cyber-Ice */
+  --bg-page: #0B0E14;
+  --bg-component: rgba(255, 255, 255, 0.03);
+  --accent-1: #00D2FF;
+  --accent-2: #FF4B2B;
+  --trend-line: #00F260;
+  --ro-line: #FDBB2D;
+  --text-primary: #FFFFFF;
+  --text-secondary: #8892b0;
+  --font-main: 'Inter', sans-serif;
+  --border-subtle: rgba(0, 210, 255, 0.2);
+}
+
+.theme-solar-paper {
+  --bg-page: #F4ECD8;
+  --bg-component: rgba(0, 0, 0, 0.05);
+  --accent-1: #268BD2;
+  --accent-2: #CB4B16;
+  --trend-line: #859900;
+  --ro-line: #DC322F;
+  --text-primary: #073642;
+  --text-secondary: #586E75;
+  --font-main: 'Playfair Display', serif;
+  --border-subtle: rgba(38, 139, 210, 0.1);
+}
+
+.theme-emerald-grid {
+  --bg-page: #061106;
+  --bg-component: rgba(85, 255, 85, 0.05);
+  --accent-1: #55FF55;
+  --accent-2: #FFB000;
+  --trend-line: #ADFF2F;
+  --ro-line: #FFD700;
+  --text-primary: #55FF55;
+  --text-secondary: #00A300;
+  --font-main: 'Courier Prime', monospace;
+  --border-subtle: rgba(85, 255, 85, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: var(--bg-component);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+}
