@@ -45,7 +45,8 @@ def test_mobile_polish():
     
     # Verify Polish Updates
     assert 'font-size: 1.8rem !important' in css
-    assert 'height: 500px !important' in css
+    # Expanded Scroll Pattern Verification
+    assert 'height: 1200px !important' in css
     assert 'margin-top: 20px !important' in css
 
 if __name__ == "__main__":

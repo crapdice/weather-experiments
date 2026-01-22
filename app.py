@@ -356,14 +356,15 @@ def generate_main_css(t, theme_choice):
             flex: 1 1 auto !important;
         }}
         
-        /* Phase 3: Chart Height Optimization */
-        /* Force charts to be shorter on mobile to allow scrolling */
+        /* Phase 3: Chart Height Optimization (EXPANDED SCROLL PATTERN) */
+        /* Instead of squashing charts, we expand the container to allow vertical scrolling */
+        /* This ensures subplots (Volatility, ROC) are visible */
         [data-testid="stPlotlyChart"] > div {{
-            height: 500px !important; /* Reduced from 600px */
-            max-height: 500px !important;
+            height: 1200px !important; /* Increased from 500px to allow stacking */
+            max-height: 1200px !important;
         }}
         [data-testid="stPlotlyChart"] iframe {{
-            height: 500px !important;
+            height: 1200px !important;
         }}
         
         /* Phase 4: Touch-Friendly Controls */
