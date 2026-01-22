@@ -1,5 +1,5 @@
 [phases.setup]
-archive = '7a339d87931bba829f68e94621536cad9132971a'
+nixpkgsArchive = '7a339d87931bba829f68e94621536cad9132971a'
 nixPkgs = ['nodejs']
 
 [phases.install]
