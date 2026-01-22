@@ -396,7 +396,27 @@ def generate_main_css(t, theme_choice):
         /* POLISH: 3D Chart Adjustment */
         /* Hide complex 3D charts on mobile if class is tagged, or valid attempt to squash */
         /* (Streamlit doesn't allow easy class tagging of specific charts, so we rely on global behavior) */
+        
+        /* v0.8.1: Hide Historical Benchmarks on Mobile */
+        /* We target the specific header anchor and all following siblings */
+        h2#benchmarks {{
+            display: none !important;
+        }}
+        h2#benchmarks ~ div {{
+            display: none !important;
+        }}
+        h2#benchmarks ~ hr {{
+            display: none !important;
+        }}
     }}
+    
+    /* v0.8.1: Hide Historical Benchmarks on Mobile */
+    /* Target the specific header anchor and all following siblings (metrics, footer) */
+    @media (max-width: 768px) {
+        h2#benchmarks { display: none !important; }
+        h2#benchmarks ~ div { display: none !important; }
+        h2#benchmarks ~ hr { display: none !important; }
+    }
     </style>
 """
     return css
@@ -611,7 +631,7 @@ else:
             font=dict(family=t['font']),
             paper_bgcolor='rgba(0,0,0,0)'
         )
-        st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
+        st.plotly_chart(fig, use_container_width=True, config={'responsive': True, 'displayModeBar': False})
 
     with tab3:
         st.subheader("Interactive Climate Stripes")
@@ -669,10 +689,10 @@ else:
             yaxis=dict(showgrid=False, showticklabels=False),
             margin=dict(t=80, b=40)
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config={'responsive': True, 'displayModeBar': False})
 
 # --- Regional Benchmarks ---
-st.markdown("### Historical Benchmarks")
+st.header("Historical Benchmarks", anchor="benchmarks")
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
 with col_b1: st.metric("All-Time Max", f"{hist_max:.1f}°F", f"{hist_max_date.strftime('%Y')}", help="The highest daily maximum temperature recorded at KORD between 1974 and today.")
 with col_b2: st.metric("All-Time Min", f"{hist_min:.1f}°F", f"{hist_min_date.strftime('%Y')}", help="The lowest daily minimum temperature recorded at KORD between 1974 and today.")
