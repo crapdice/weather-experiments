@@ -71,7 +71,9 @@ export function ClimateStripes({ data }: Props) {
             .domain([4, -4]); // Anomaly range
 
         // --- MAIN STRIPES ---
-        g.selectAll(".stripe")
+        const stripeLayer = g.append("g").attr("class", "stripes-layer");
+
+        stripeLayer.selectAll(".stripe")
             .data(filteredStripes)
             .enter()
             .append("rect")

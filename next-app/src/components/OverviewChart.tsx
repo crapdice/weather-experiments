@@ -107,7 +107,37 @@ export function OverviewChart({ data }: Props) {
 
         // --- SUBPLOTS ---
         const g1 = g.append("g").attr("class", "subplot-1");
-        const gSlider = g.append("g").attr("class", "brush-area").attr("transform", `translate(0, ${h1 + 40})`);
+        // Single large overlay rect for the whole chart area
+        const hoverOverlay = g.append("rect")
+            .attr("width", width)
+            .attr("height", totalHeight - margin.top - margin.bottom)
+            .attr("fill", "transparent")
+            .attr("pointer-events", "all");
+
+        // --- SUBPLOTS (Re-append or ensure they are on top if needed) ---
+        // Actually, we'll just append the brush AFTER the overlay to ensure it's on top.
+        const gBrushArea = g.append("g").attr("class", "brush-area").attr("transform", `translate(0, ${h1 + 40})`);
+
+        const brush = d3.brushX()
+            .extent([[0, 0], [width, sliderHeight]])
+            .on("end", (event) => {
+                if (!event.sourceEvent) return;
+                if (!event.selection) return;
+                const [x0, x1] = event.selection;
+                const newStart = xFull.invert(x0);
+                const newEnd = xFull.invert(x1);
+                if (Math.abs(newStart.getTime() - dateRange[0].getTime()) > 1000 * 60 * 60 * 24 ||
+                    Math.abs(newEnd.getTime() - dateRange[1].getTime()) > 1000 * 60 * 60 * 24) {
+                    setDateRange([newStart, newEnd]);
+                }
+            });
+
+        const gBrush = gBrushArea.call(brush);
+        gBrush.call(brush.move, [xFull(dateRange[0]), xFull(dateRange[1])]);
+
+        // Static label for slider
+        gBrushArea.append("text").attr("x", 0).attr("y", -5).text("Range Selector").style("fill", "var(--text-secondary)").style("font-size", "0.7rem").style("text-transform", "uppercase");
+
         const g2 = g.append("g").attr("class", "subplot-2").attr("transform", `translate(0, ${h1 + sliderHeight + verticalPadding + 10})`);
         const g3 = g.append("g").attr("class", "subplot-3").attr("transform", `translate(0, ${h1 + sliderHeight + h2 + verticalPadding * 2 + 10})`);
 
@@ -157,25 +187,6 @@ export function OverviewChart({ data }: Props) {
             .attr("stroke-width", 1)
             .attr("opacity", 0.4)
             .attr("d", lineMean);
-
-        // --- RANGE SLIDER (BRUSH) ---
-        const brush = d3.brushX()
-            .extent([[0, 0], [width, sliderHeight]])
-            .on("end", (event) => {
-                if (!event.sourceEvent) return; // Only process user-initiated events
-                if (!event.selection) return;
-                const [x0, x1] = event.selection;
-                const newStart = xFull.invert(x0);
-                const newEnd = xFull.invert(x1);
-                // Only update if significantly different to avoid potential loops
-                if (Math.abs(newStart.getTime() - dateRange[0].getTime()) > 1000 * 60 * 60 * 24 ||
-                    Math.abs(newEnd.getTime() - dateRange[1].getTime()) > 1000 * 60 * 60 * 24) {
-                    setDateRange([newStart, newEnd]);
-                }
-            });
-
-        const gBrush = gSlider.call(brush);
-        gBrush.call(brush.move, [xFull(dateRange[0]), xFull(dateRange[1])]);
 
         // --- PLOT 2: SMA ---
         g2.append("text").attr("x", 0).attr("y", -10).text("7-Day Volatility Trend").style("fill", "var(--trend-line)").style("font-size", "0.8rem").style("font-weight", "bold");
@@ -305,27 +316,21 @@ export function OverviewChart({ data }: Props) {
 
         const bisect = d3.bisector<WeatherRecord, Date>(d => d.Date).left;
 
-        // Single large overlay rect for the whole chart area
-        g.append("rect")
-            .attr("width", width)
-            .attr("height", totalHeight - margin.top - margin.bottom)
-            .attr("fill", "transparent")
-            .attr("pointer-events", "all")
-            .on("mousemove", (event) => {
-                const mouseX = d3.pointer(event)[0];
-                const date = x.invert(mouseX);
-                const i = bisect(filteredData, date, 1);
-                const d = filteredData[i - 1];
+        hoverOverlay.on("mousemove", (event) => {
+            const mouseX = d3.pointer(event)[0];
+            const date = x.invert(mouseX);
+            const i = bisect(filteredData, date, 1);
+            const d = filteredData[i - 1];
 
-                if (d) {
-                    hoverLine
-                        .attr("x1", x(d.Date))
-                        .attr("x2", x(d.Date))
-                        .style("opacity", 0.5);
+            if (d) {
+                hoverLine
+                    .attr("x1", x(d.Date))
+                    .attr("x2", x(d.Date))
+                    .style("opacity", 0.5);
 
-                    tooltip
-                        .style("opacity", 1)
-                        .html(`
+                tooltip
+                    .style("opacity", 1)
+                    .html(`
               <div style="color: var(--accent-1); font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 4px;">
                 ${d.Date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
@@ -342,10 +347,10 @@ export function OverviewChart({ data }: Props) {
                 <span style="font-weight: bold;">${d.ROC1y ? (d.ROC1y > 0 ? '+' : '') + d.ROC1y.toFixed(1) : 'N/A'}°F</span>
               </div>
             `)
-                        .style("left", (event.pageX + 20) + "px")
-                        .style("top", (event.pageY - 20) + "px");
-                }
-            })
+                    .style("left", (event.pageX + 20) + "px")
+                    .style("top", (event.pageY - 20) + "px");
+            }
+        })
             .on("mouseout", () => {
                 tooltip.style("opacity", 0);
                 hoverLine.style("opacity", 0);
