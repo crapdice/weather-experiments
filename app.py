@@ -469,7 +469,7 @@ if app_mode == "Historical Overview":
 
     fig.update_layout(
         height=1330, template=t['plotly_template'], paper_bgcolor='rgba(0,0,0,0)', 
-        plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=150, b=50), hovermode="x unified",
+        plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=80, b=50), hovermode="x unified",
         yaxis_autorange=True, yaxis2_autorange=True, yaxis3_autorange=True,
         font=dict(family=t['font'], color=t['text']),
         hoverlabel=dict(bgcolor=t['page_bg'], font_size=12, font_family=t['font'], font_color=t['text']),
@@ -485,7 +485,7 @@ if app_mode == "Historical Overview":
         fig.update_xaxes(range=[start_date, max_d], row=1, col=1)
         fig.update_xaxes(range=[start_date, max_d], row=2, col=1)
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
 
 elif app_mode == "Yearly Comparison":
     years = sorted(all_data['Year'].unique(), reverse=True)
@@ -509,7 +509,7 @@ elif app_mode == "Yearly Comparison":
         font=dict(family=t['font']),
         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
 
 else:
     # --- Climate Lab (Experimental) ---
@@ -550,7 +550,7 @@ else:
     # Move colorbar to horizontal on bottom for mobile-ish layout (unfortunately requires layout switch or clever hack)
     # For now, we minimize margins.
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
 
     with tab2:
         st.subheader("Radial Climate Compass")
@@ -576,7 +576,7 @@ else:
             font=dict(family=t['font']),
             paper_bgcolor='rgba(0,0,0,0)'
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
 
     with tab3:
         st.subheader("Interactive Climate Stripes")
