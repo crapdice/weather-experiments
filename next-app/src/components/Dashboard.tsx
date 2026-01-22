@@ -9,33 +9,33 @@ import { ClimateStripes } from './ClimateStripes';
 import { loadWeatherData, WeatherRecord, ClimateStats } from '@/utils/weatherData';
 
 export function Dashboard() {
-    const [data, setData] = useState<WeatherRecord[]>([]);
-    const [stats, setStats] = useState<ClimateStats | null>(null);
-    const [view, setView] = useState('overview');
-    const [labTab, setLabTab] = useState('stripes');
-    const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<WeatherRecord[]>([]);
+  const [stats, setStats] = useState<ClimateStats | null>(null);
+  const [view, setView] = useState('overview');
+  const [labTab, setLabTab] = useState('stripes');
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        async function init() {
-            try {
-                const { data, stats } = await loadWeatherData('/data/chicago_weather_50years.csv');
-                setData(data);
-                setStats(stats);
-            } catch (err) {
-                console.error("Failed to load weather data:", err);
-            } finally {
-                setLoading(false);
-            }
-        }
-        init();
-    }, []);
+  useEffect(() => {
+    async function init() {
+      try {
+        const { data, stats } = await loadWeatherData('/data/chicago_weather_50years.csv');
+        setData(data);
+        setStats(stats);
+      } catch (err) {
+        console.error("Failed to load weather data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    init();
+  }, []);
 
-    if (loading) {
-        return (
-            <div className="loading-container">
-                <div className="loader"></div>
-                <p>Catching up with recent climate events...</p>
-                <style jsx>{`
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loader"></div>
+        <p>Catching up with recent climate events...</p>
+        <style jsx>{`
           .loading-container {
             height: 100vh;
             display: flex;
@@ -58,95 +58,95 @@ export function Dashboard() {
             to { transform: rotate(360deg); }
           }
         `}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div className="dashboard-layout">
+      <Sidebar
+        currentView={view}
+        onViewChange={setView}
+        recs={data.length}
+        startDate={data.length > 0 ? data[0].Date : null}
+        endDate={data.length > 0 ? data[data.length - 1].Date : null}
+      />
+
+      <main className="main-content">
+        <header className="header">
+          <h1 className="title">KORD Intelligence</h1>
+          <p className="subtitle">
+            Climate Data for Chicago O&apos;Hare | 1974 - {stats?.lastUpdate.getFullYear()}
+          </p>
+        </header>
+
+        <section className="metrics-grid">
+          <MetricCard
+            label="All-Time Max"
+            value={`${stats?.maxTemp.toFixed(1)}°F`}
+            delta={stats?.maxTempDate.getFullYear().toString()}
+            help="The highest daily maximum temperature recorded at KORD between 1974 and today."
+          />
+          <MetricCard
+            label="All-Time Min"
+            value={`${stats?.minTemp.toFixed(1)}°F`}
+            delta={stats?.minTempDate.getFullYear().toString()}
+            accent="primary"
+            help="The lowest daily minimum temperature recorded at KORD between 1974 and today."
+          />
+          <MetricCard
+            label="Climate Pulse"
+            value={`${stats?.pulseDelta.toFixed(2)}°F`}
+            delta="Delta vs 50y Baseline"
+            accent="secondary"
+            help="The climatological anomaly: compares the last 30 days against the 50-year average for those same calendar days."
+          />
+          <MetricCard
+            label="Decadal Shift"
+            value={`${stats?.decadalDelta.toFixed(2)}°F`}
+            delta="2020s vs 1970s"
+            accent="ro"
+            help="The difference in average temperature between the most recent decade and the first decade of records."
+          />
+        </section>
+
+        <div className="chart-area glass-panel">
+          {view === 'overview' && data.length > 0 && (
+            <OverviewChart data={data} />
+          )}
+
+          {view === 'comparison' && data.length > 0 && (
+            <ComparisonChart data={data} />
+          )}
+
+          {view === 'lab' && (
+            <div className="lab-container">
+              <div className="lab-tabs">
+                <button className={labTab === 'stripes' ? 'active' : ''} onClick={() => setLabTab('stripes')}>Climate Stripes</button>
+                <button disabled title="Coming soon">Radial Compass</button>
+                <button disabled title="Coming soon">Thermal Topo</button>
+              </div>
+              <div className="lab-content">
+                {labTab === 'stripes' && data.length > 0 && <ClimateStripes data={data} />}
+              </div>
             </div>
-        );
-    }
+          )}
+        </div>
 
-    return (
-        <div className="dashboard-layout">
-            <Sidebar
-                currentView={view}
-                onViewChange={setView}
-                recs={data.length}
-                startDate={data.length > 0 ? data[0].Date : null}
-                endDate={data.length > 0 ? data[data.length - 1].Date : null}
-            />
+        <section className="metrics-grid secondary-metrics">
+          <MetricCard label="Extreme Frost" value={stats?.frostDays || 0} delta="Days < 0°F" />
+          <MetricCard label="Extreme Heat" value={stats?.heatDays || 0} delta="Days > 95°F" accent="secondary" />
+          <MetricCard label="Volatility Index" value={`${stats?.volatility.toFixed(2)}°F`} delta="Avg Daily Δ" accent="ro" />
+          <MetricCard label="Total Records" value={data.length.toLocaleString()} delta="High-Fid Samples" />
+        </section>
 
-            <main className="main-content">
-                <header className="header">
-                    <h1 className="title">KORD Intelligence</h1>
-                    <p className="subtitle">
-                        Climate Data for Chicago O&apos;Hare | 1974 - {stats?.lastUpdate.getFullYear()}
-                    </p>
-                </header>
+        <footer className="footer">
+          <hr />
+          <p>KORD Intel Sandbox | Innovation & Reliability</p>
+        </footer>
+      </main>
 
-                <section className="metrics-grid">
-                    <MetricCard
-                        label="All-Time Max"
-                        value={`${stats?.maxTemp.toFixed(1)}°F`}
-                        delta={stats?.maxTempDate.getFullYear().toString()}
-                        help="The highest daily maximum temperature recorded at KORD between 1974 and today."
-                    />
-                    <MetricCard
-                        label="All-Time Min"
-                        value={`${stats?.minTemp.toFixed(1)}°F`}
-                        delta={stats?.minTempDate.getFullYear().toString()}
-                        accent="primary"
-                        help="The lowest daily minimum temperature recorded at KORD between 1974 and today."
-                    />
-                    <MetricCard
-                        label="Climate Pulse"
-                        value={`${stats?.pulseDelta.toFixed(2)}°F`}
-                        delta="Delta vs 50y Baseline"
-                        accent="secondary"
-                        help="The climatological anomaly: compares the last 30 days against the 50-year average for those same calendar days."
-                    />
-                    <MetricCard
-                        label="Decadal Shift"
-                        value={`${stats?.decadalDelta.toFixed(2)}°F`}
-                        delta="2020s vs 1970s"
-                        accent="ro"
-                        help="The difference in average temperature between the most recent decade and the first decade of records."
-                    />
-                </section>
-
-                <div className="chart-area glass-panel">
-                    {view === 'overview' && data.length > 0 && (
-                        <OverviewChart data={data} />
-                    )}
-
-                    {view === 'comparison' && data.length > 0 && (
-                        <ComparisonChart data={data} />
-                    )}
-
-                    {view === 'lab' && (
-                        <div className="lab-container">
-                            <div className="lab-tabs">
-                                <button className={labTab === 'stripes' ? 'active' : ''} onClick={() => setLabTab('stripes')}>Climate Stripes</button>
-                                <button disabled title="Coming soon">Radial Compass</button>
-                                <button disabled title="Coming soon">Thermal Topo</button>
-                            </div>
-                            <div className="lab-content">
-                                {labTab === 'stripes' && data.length > 0 && <ClimateStripes data={data} />}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <section className="metrics-grid secondary-metrics">
-                    <MetricCard label="Extreme Frost" value={stats?.frostDays || 0} delta="Days < 0°F" />
-                    <MetricCard label="Extreme Heat" value={stats?.heatDays || 0} delta="Days > 95°F" accent="secondary" />
-                    <MetricCard label="Volatility Index" value={`${stats?.volatility.toFixed(2)}°F`} delta="Avg Daily Δ" accent="ro" />
-                    <MetricCard label="Total Records" value={data.length.toLocaleString()} delta="High-Fid Samples" />
-                </section>
-
-                <footer className="footer">
-                    <hr />
-                    <p>KORD Intel Sandbox | Innovation & Reliability</p>
-                </footer>
-            </main>
-
-            <style jsx>{`
+      <style jsx>{`
         .dashboard-layout {
           display: flex;
           min-height: 100vh;
@@ -190,7 +190,7 @@ export function Dashboard() {
         }
 
         .chart-area {
-          min-height: 600px;
+          min-height: 1100px;
           padding: 32px;
           display: flex;
           flex-direction: column;
@@ -263,6 +263,6 @@ export function Dashboard() {
           }
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 }
