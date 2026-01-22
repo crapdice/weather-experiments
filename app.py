@@ -188,7 +188,8 @@ with st.sidebar:
         st.rerun()
 
 # Inject Theme CSS
-st.markdown(f"""
+def generate_main_css(t, theme_choice):
+    css = f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Playfair+Display:ital,wght@0,400;0,800;1,400&display=swap');
     
@@ -288,8 +289,64 @@ st.markdown(f"""
     hr {{
         border-color: {hex_to_rgba(t['accent_1'], 0.2)} !important;
     }}
-</style>
-""", unsafe_allow_html=True)
+    /* --- MOBILE RESPONSIVENESS (Phase 1) --- */
+    @media (max-width: 768px) {{
+        .header-text {{
+            font-size: 2.0rem !important;
+            text-align: center;
+        }}
+        .lab-title {{
+            font-size: 1.1rem !important;
+        }}
+        [data-testid="stMetric"] {{
+            padding: 10px !important;
+        }}
+        [data-testid="stMetricValue"] {{
+            font-size: 1.2rem !important;
+        }}
+        .pulse-widget {{
+            padding: 10px !important;
+            margin-bottom: 10px !important;
+        }}
+        /* Stack column containers on mobile if needed (handled by Streamlit usually, but we force specific tweaks) */
+        [data-testid="stSidebar"] {{
+            min-width: 100px !important; /* Allow sidebar to shrink */
+        }}
+        /* Phase 2: Layout Stacking */
+        [data-testid="stHorizontalBlock"] {{
+            flex-direction: column !important;
+        }}
+        [data-testid="column"] {{
+            width: 100% !important;
+            flex: 1 1 auto !important;
+        }}
+        
+        /* Phase 3: Chart Height Optimization */
+        /* Force charts to be shorter on mobile to allow scrolling */
+        [data-testid="stPlotlyChart"] > div {{
+            height: 600px !important;
+            max-height: 600px !important;
+        }}
+        [data-testid="stPlotlyChart"] iframe {{
+            height: 600px !important;
+        }}
+        
+        /* Phase 4: Touch-Friendly Controls */
+        /* Enforce Apple HIG minimum tap target size (44px) */
+        .stRadio div, .stSelectbox div, .stButton button, [data-baseweb="select"] {{
+            min-height: 44px !important;
+            touch-action: manipulation; /* Disable double-tap zoom for faster response */
+        }}
+        /* Add spacing between stacked interactive elements */
+        .stRadio, .stSelectbox {{
+            margin-bottom: 15px !important;
+        }}
+    }}
+    </style>
+"""
+    return css
+
+st.markdown(generate_main_css(t, theme_choice), unsafe_allow_html=True)
 
 # --- Header ---
 col_h1, col_h2 = st.columns([2, 1])
