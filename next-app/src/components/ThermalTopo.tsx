@@ -118,32 +118,80 @@ export function ThermalTopo({ data }: Props) {
       canvas.width = textWidth + 10;
       canvas.height = fontsize + 10;
       context.font = "Bold " + fontsize + "px " + fontface;
-      context.fillStyle = "rgba(255, 255, 255, 1.0)";
+      context.fillStyle = parameters.color || "rgba(255, 255, 255, 1.0)";
       context.fillText(message, 5, fontsize);
 
       const texture = new THREE.CanvasTexture(canvas);
       const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
       const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.scale.set(textWidth / 10, fontsize / 10, 1);
+      sprite.scale.set(textWidth / 15, fontsize / 15, 1);
       return sprite;
     };
 
-    const labelTemp = makeTextSprite("Temp (°F)");
-    if (labelTemp) {
-      labelTemp.position.set(-10, 40, 0);
-      scene.add(labelTemp);
+    // Helper to add a tick mark
+    const addTick = (x: number, y: number, z: number, axis: 'x' | 'y' | 'z') => {
+      const size = 2;
+      const tickGeom = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(axis === 'x' ? 0 : size, axis === 'y' ? 0 : size, axis === 'z' ? 0 : size)
+      ]);
+      const tick = new THREE.Line(tickGeom, new THREE.LineBasicMaterial({ color: 0xaaaaaa, opacity: 0.5, transparent: true }));
+      tick.position.set(x, y, z);
+      scene.add(tick);
     }
 
-    const labelDoy = makeTextSprite("Day of Year (1-366)");
+    // --- X Axis: Day of Year (1-366 -> -60 to 60) ---
+    const doyTicks = [1, 50, 100, 150, 200, 250, 300, 365];
+    doyTicks.forEach(tick => {
+      const xPos = ((tick - 1) / 365) * planeW - (planeW / 2);
+      const label = makeTextSprite(tick.toString(), { fontsize: 32, color: "rgba(255,255,255,0.7)" });
+      if (label) {
+        label.position.set(xPos, -12, 45);
+        scene.add(label);
+      }
+      addTick(xPos, -1, 40, 'z');
+    });
+
+    const labelDoy = makeTextSprite("Day of Year", { color: "#00d2ff" });
     if (labelDoy) {
-      labelDoy.position.set(60, -10, 0);
+      labelDoy.position.set(75, -12, 45);
       scene.add(labelDoy);
     }
 
-    const labelYear = makeTextSprite("Year (1974-2024)");
+    // --- Z Axis: Years (1974-2024 -> -40 to 40) ---
+    const yearInterval = 10;
+    for (let y = years[0]; y <= years[years.length - 1]; y += yearInterval) {
+      const zPos = ((y - years[0]) / (years[years.length - 1] - years[0])) * planeH - (planeH / 2);
+      const label = makeTextSprite(y.toString(), { fontsize: 32, color: "rgba(255,255,255,0.7)" });
+      if (label) {
+        label.position.set(-65, -12, zPos);
+        scene.add(label);
+      }
+      addTick(-60, -1, zPos, 'x');
+    }
+
+    const labelYear = makeTextSprite("Archive Year", { color: "#00d2ff" });
     if (labelYear) {
-      labelYear.position.set(0, -10, 40);
+      labelYear.position.set(-65, -12, -45);
       scene.add(labelYear);
+    }
+
+    // --- Y Axis: Temperatures (-10 to 95 -> -22 to 20) ---
+    const tempTicks = [20, 60, 95];
+    tempTicks.forEach(t => {
+      const yPos = (t - 45) / 2.5;
+      const label = makeTextSprite(`${t}°F`, { fontsize: 32, color: "rgba(255,255,255,0.7)" });
+      if (label) {
+        label.position.set(-65, yPos, 45);
+        scene.add(label);
+      }
+      addTick(-60, yPos, 40, 'x');
+    });
+
+    const labelTemp = makeTextSprite("Temp (°F)", { color: "#00d2ff" });
+    if (labelTemp) {
+      labelTemp.position.set(-65, 25, 45);
+      scene.add(labelTemp);
     }
 
     // --- Lights ---
@@ -200,10 +248,19 @@ export function ThermalTopo({ data }: Props) {
         </div>
         <div className="topo-legend">
           <div className="legend-bar"></div>
+          <div className="legend-ticks">
+            <div className="tick"></div>
+            <div className="tick"></div>
+            <div className="tick"></div>
+            <div className="tick"></div>
+            <div className="tick"></div>
+          </div>
           <div className="legend-labels">
-            <span>-20°F</span>
-            <span>40°F</span>
-            <span>100°F</span>
+            <span>-10°F</span>
+            <span>20°F</span>
+            <span>45°F</span>
+            <span>70°F</span>
+            <span>95°F</span>
           </div>
         </div>
       </div>
@@ -229,63 +286,86 @@ export function ThermalTopo({ data }: Props) {
           left: 20px;
           pointer-events: none;
           color: var(--text-primary);
-          padding: 20px;
+          padding: 24px;
           display: flex;
           flex-direction: column;
           gap: 16px;
-          max-width: 280px;
-          background: rgba(0,0,0,0.6);
+          width: 280px;
+          background: rgba(0,0,0,0.8);
+          border: 1px solid var(--accent-1);
+          box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
         }
         .overlay-header {
           display: flex;
           flex-direction: column;
+          border-left: 3px solid var(--accent-1);
+          padding-left: 12px;
         }
         .overlay-header strong {
           color: var(--accent-1);
           text-transform: uppercase;
           font-weight: 900;
+          font-size: 1.1rem;
           letter-spacing: 1px;
         }
         .overlay-header span {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             color: var(--text-secondary);
+            opacity: 0.8;
         }
         .topo-stats {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
+            margin-top: 4px;
         }
         .stat {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 0.75rem;
+            gap: 12px;
+            font-size: 0.8rem;
             color: var(--text-secondary);
+            font-weight: 600;
         }
         .dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
+            box-shadow: 0 0 5px currentColor;
         }
-        .dot.hot { background: #fde725; }
-        .dot.cold { background: #440154; }
+        .dot.hot { background: #fee32d; color: #fee32d; }
+        .dot.cold { background: #30123b; color: #30123b; }
         
         .topo-legend {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 6px;
+          margin-top: 8px;
         }
         .legend-bar {
-          height: 12px;
+          height: 10px;
           width: 100%;
-          background: linear-gradient(to right, #440154, #21918c, #fde725);
-          border-radius: 2px;
+          background: linear-gradient(to right, #30123b, #466be1, #2cb5e8, #1be5b0, #62fc6b, #a4fc3c, #d4e02a, #f6a928, #f46d1c, #d43d0b, #7a0403);
+          border-radius: 1px;
+        }
+        .legend-ticks {
+            display: flex;
+            justify-content: space-between;
+            height: 4px;
+            padding: 0 2px;
+        }
+        .tick {
+            width: 1px;
+            height: 100%;
+            background: var(--text-secondary);
+            opacity: 0.4;
         }
         .legend-labels {
           display: flex;
           justify-content: space-between;
-          font-size: 0.65rem;
+          font-size: 0.6rem;
           color: var(--text-secondary);
+          font-family: monospace;
         }
       `}</style>
     </div>

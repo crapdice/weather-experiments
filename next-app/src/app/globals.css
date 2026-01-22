@@ -66,11 +66,9 @@ a {
   text-decoration: none;
 }
 
-/* Glassmorphism helpers */
+/* Lightweight Glassmorphism */
 .glass-panel {
   background: var(--bg-component);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
 }

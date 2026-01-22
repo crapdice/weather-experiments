@@ -82,9 +82,101 @@ export function ClimateStripes({ data }: Props) {
             .attr("y", 0)
             .attr("width", x.bandwidth() + 1)
             .attr("height", mainHeight)
-            .attr("fill", d => color(d.anomaly))
-            .append("title")
-            .text(d => `${d.date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}: ${d.anomaly > 0 ? '+' : ''}${d.anomaly.toFixed(2)}°F anomaly`);
+            .attr("fill", d => color(d.anomaly));
+
+        // --- LEGEND ---
+        const legendWidth = 200;
+        const legendHeight = 10;
+        const gLegend = g.append("g")
+            .attr("transform", `translate(${width - legendWidth}, -25)`);
+
+        const legendScale = d3.scaleLinear().domain([-4, 4]).range([0, legendWidth]);
+
+        const defs = svg.append("defs");
+        const gradient = defs.append("linearGradient")
+            .attr("id", "stripe-gradient")
+            .attr("x1", "0%").attr("y1", "0%")
+            .attr("x2", "100%").attr("y2", "0%");
+
+        const stops = d3.range(-4, 4.1, 0.5);
+        stops.forEach(s => {
+            gradient.append("stop")
+                .attr("offset", `${((s + 4) / 8) * 100}%`)
+                .attr("stop-color", color(s));
+        });
+
+        gLegend.append("rect")
+            .attr("width", legendWidth)
+            .attr("height", legendHeight)
+            .attr("fill", "url(#stripe-gradient)")
+            .attr("rx", 2);
+
+        gLegend.append("text")
+            .attr("x", 0).attr("y", legendHeight + 12)
+            .text("-4°F")
+            .style("font-size", "0.6rem").style("fill", "var(--text-secondary)");
+
+        gLegend.append("text")
+            .attr("x", legendWidth).attr("y", legendHeight + 12)
+            .attr("text-anchor", "end")
+            .text("+4°F")
+            .style("font-size", "0.6rem").style("fill", "var(--text-secondary)");
+
+        gLegend.append("text")
+            .attr("x", legendWidth / 2).attr("y", legendHeight + 12)
+            .attr("text-anchor", "middle")
+            .text("ANOMALY DELTA")
+            .style("font-size", "0.5rem").style("fill", "var(--text-secondary)").style("letter-spacing", "1px");
+
+        // --- TOOLTIP ---
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "stripe-tooltip")
+            .style("opacity", 0)
+            .style("position", "absolute")
+            .style("background", "var(--bg-page)")
+            .style("border", "1px solid var(--accent-1)")
+            .style("padding", "8px 12px")
+            .style("border-radius", "4px")
+            .style("pointer-events", "none")
+            .style("z-index", "100")
+            .style("font-size", "0.75rem")
+            .style("backdrop-filter", "blur(8px)")
+            .style("box-shadow", "0 4px 12px rgba(0,0,0,0.5)");
+
+        const hoverOverlay = g.append("rect")
+            .attr("width", width)
+            .attr("height", mainHeight)
+            .attr("fill", "transparent")
+            .attr("pointer-events", "all");
+
+        hoverOverlay.on("mousemove", (event) => {
+            const [mx] = d3.pointer(event);
+            const eachBand = x.step();
+            const index = Math.floor(mx / eachBand);
+            const d = filteredStripes[index];
+
+            if (d) {
+                tooltip
+                    .style("opacity", 1)
+                    .html(`
+                        <div style="font-weight: 800; color: var(--accent-1); border-bottom: 1px solid var(--border-subtle); margin-bottom: 4px; padding-bottom: 2px;">
+                            ${d.date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; gap: 15px;">
+                            <span>Avg Temp:</span>
+                            <span style="font-weight: bold;">${d.avg.toFixed(1)}°F</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; gap: 15px; color: ${d.anomaly > 0 ? '#ff4d4d' : '#4d94ff'}">
+                            <span>Anomaly:</span>
+                            <span style="font-weight: bold;">${d.anomaly > 0 ? '+' : ''}${d.anomaly.toFixed(2)}°F</span>
+                        </div>
+                    `)
+                    .style("left", (event.pageX + 15) + "px")
+                    .style("top", (event.pageY - 15) + "px");
+            }
+        }).on("mouseout", () => {
+            tooltip.style("opacity", 0);
+        });
 
         // --- RANGE SLIDER (BRUSH) ---
         const gSlider = g.append("g")
@@ -97,13 +189,18 @@ export function ClimateStripes({ data }: Props) {
             .append("rect")
             .attr("x", d => xFull(d.date))
             .attr("y", 0)
-            .attr("width", width / monthlyData.length + 1)
+            .attr("width", (width / monthlyData.length) + 0.5)
             .attr("height", sliderHeight)
             .attr("fill", d => color(d.anomaly))
             .attr("opacity", 0.5);
 
         const brush = d3.brushX()
             .extent([[0, 0], [width, sliderHeight]])
+            .on("brush", (event) => {
+                if (event.selection) {
+                    updateHandles(event.selection);
+                }
+            })
             .on("end", (event) => {
                 if (!event.sourceEvent) return;
                 if (!event.selection) return;
@@ -115,7 +212,31 @@ export function ClimateStripes({ data }: Props) {
             .attr("class", "brush")
             .call(brush);
 
+        // Custom handles
+        const handlePath = (d: any) => {
+            const h = sliderHeight;
+            const w = 6;
+            const x = 0;
+            return `M ${x - w / 2}, 0 L ${x + w / 2}, 0 L ${x + w / 2}, ${h} L ${x - w / 2}, ${h} Z 
+                    M ${x - 1}, ${h / 4} L ${x - 1}, ${3 * h / 4} M ${x + 1}, ${h / 4} L ${x + 1}, ${3 * h / 4}`;
+        };
+
+        const handle = gBrush.selectAll(".handle--custom")
+            .data([{ type: "w" }, { type: "e" }])
+            .enter().append("path")
+            .attr("class", "handle--custom")
+            .attr("fill", "var(--accent-1)")
+            .attr("stroke", "var(--bg-page)")
+            .attr("stroke-width", 0.5)
+            .attr("cursor", "ew-resize")
+            .attr("d", handlePath);
+
+        function updateHandles(selection: [number, number]) {
+            handle.attr("display", null).attr("transform", (d, i) => `translate(${selection[i]}, 0)`);
+        }
+
         gBrush.call(brush.move, [xFull(range[0]), xFull(range[1])]);
+        updateHandles([xFull(range[0]), xFull(range[1])]);
 
         // Static label for slider
         gSlider.append("text")
@@ -125,6 +246,9 @@ export function ClimateStripes({ data }: Props) {
             .style("fill", "var(--text-secondary)")
             .style("text-transform", "uppercase");
 
+        return () => {
+            tooltip.remove();
+        };
     }, [filteredStripes, range]);
 
     return (

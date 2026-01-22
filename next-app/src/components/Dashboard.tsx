@@ -8,7 +8,9 @@ import { ComparisonChart } from './ComparisonChart';
 import { ClimateStripes } from './ClimateStripes';
 import { ThermalTopo } from './ThermalTopo';
 import { RadialCompass } from './RadialCompass';
-import { loadWeatherData, WeatherRecord, ClimateStats } from '@/utils/weatherData';
+import { WinterIntensity } from './WinterIntensity';
+import { PredictiveLab } from './PredictiveLab';
+import { loadWeatherData, refreshWeatherData, WeatherRecord, ClimateStats } from '@/utils/weatherData';
 
 export function Dashboard() {
   const [data, setData] = useState<WeatherRecord[]>([]);
@@ -16,6 +18,7 @@ export function Dashboard() {
   const [view, setView] = useState('overview');
   const [labTab, setLabTab] = useState('stripes');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -31,6 +34,20 @@ export function Dashboard() {
     }
     init();
   }, []);
+
+  const handleRefresh = async () => {
+    if (refreshing || data.length === 0) return;
+    setRefreshing(true);
+    try {
+      const { data: newData, stats: newStats } = await refreshWeatherData(data);
+      setData(newData);
+      setStats(newStats);
+    } catch (err) {
+      console.error("Refresh failed:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -72,6 +89,8 @@ export function Dashboard() {
         recs={data.length}
         startDate={data.length > 0 ? data[0].Date : null}
         endDate={data.length > 0 ? data[data.length - 1].Date : null}
+        isRefreshing={refreshing}
+        onRefresh={handleRefresh}
       />
 
       <main className="main-content">
@@ -127,11 +146,15 @@ export function Dashboard() {
                 <button className={labTab === 'stripes' ? 'active' : ''} onClick={() => setLabTab('stripes')}>Climate Stripes</button>
                 <button className={labTab === 'topo' ? 'active' : ''} onClick={() => setLabTab('topo')}>3D Thermal Topo</button>
                 <button className={labTab === 'radial' ? 'active' : ''} onClick={() => setLabTab('radial')}>Radial Compass</button>
+                <button className={labTab === 'winter' ? 'active' : ''} onClick={() => setLabTab('winter')}>Winter Intensity</button>
+                <button className={labTab === 'predictive' ? 'active' : ''} onClick={() => setLabTab('predictive')}>Predictive Lab</button>
               </div>
               <div className="lab-content">
                 {labTab === 'stripes' && data.length > 0 && <ClimateStripes data={data} />}
                 {labTab === 'topo' && data.length > 0 && <ThermalTopo data={data} />}
                 {labTab === 'radial' && data.length > 0 && <RadialCompass data={data} />}
+                {labTab === 'winter' && data.length > 0 && <WinterIntensity data={data} />}
+                {labTab === 'predictive' && data.length > 0 && <PredictiveLab data={data} />}
               </div>
             </div>
           )}

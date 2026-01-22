@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import { Activity, ArrowLeftRight, FlaskConical, LayoutDashboard } from 'lucide-react';
+import { Activity, ArrowLeftRight, FlaskConical, LayoutDashboard, RefreshCw } from 'lucide-react';
 
 interface SidebarProps {
   currentView: string;
@@ -10,9 +10,11 @@ interface SidebarProps {
   recs: number;
   startDate: Date | null;
   endDate: Date | null;
+  isRefreshing: boolean;
+  onRefresh: () => void;
 }
 
-export function Sidebar({ currentView, onViewChange, recs, startDate, endDate }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, isRefreshing, onRefresh }: SidebarProps) {
   const { theme, setTheme } = useTheme();
 
   const themes = [
@@ -50,6 +52,18 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate }:
           Climate Lab (Beta)
         </button>
       </nav>
+
+      <div className="sidebar-section">
+        <h3>Live Intelligence Feed</h3>
+        <button
+          className={`refresh-btn ${isRefreshing ? 'refreshing' : ''}`}
+          onClick={onRefresh}
+          disabled={isRefreshing}
+        >
+          <RefreshCw size={16} className={isRefreshing ? 'spin' : ''} />
+          {isRefreshing ? 'Syncing...' : 'Fetch Latest Data'}
+        </button>
+      </div>
 
       <div className="sidebar-section">
         <h3>System Diagnostics</h3>
@@ -139,6 +153,42 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate }:
           margin-bottom: 12px;
           letter-spacing: 0.5px;
           font-weight: 800;
+        }
+
+        .refresh-btn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 12px;
+          background: rgba(0, 210, 255, 0.1);
+          border: 1px solid var(--accent-1);
+          color: var(--accent-1);
+          border-radius: 8px;
+          font-weight: bold;
+          font-size: 0.85rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover:not(:disabled) {
+          background: var(--accent-1);
+          color: var(--bg-page);
+        }
+
+        .refresh-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        :global(.spin) {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
         .diagnostic-box {
