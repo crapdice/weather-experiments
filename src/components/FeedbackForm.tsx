@@ -5,26 +5,36 @@ import { ShadowPortal } from './ShadowPortal';
 import { MessageSquare, X, Send } from 'lucide-react';
 
 export function FeedbackForm() {
-    const [isOpen, setIsOpen] = useState(false);
-    const [feedback, setFeedback] = useState('');
-    const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (feedback.trim()) {
-            console.log('Feedback submitted:', feedback);
-            setIsSubmitted(true);
-            setTimeout(() => {
-                setIsSubmitted(false);
-                setFeedback('');
-                setIsOpen(false);
-            }, 3000);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (feedback.trim()) {
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ feedback }),
+        });
+        if (res.ok) {
+          setIsSubmitted(true);
+          setTimeout(() => {
+            setIsSubmitted(false);
+            setFeedback('');
+            setIsOpen(false);
+          }, 3000);
         }
-    };
+      } catch (err) {
+        console.error("Communication failure");
+      }
+    }
+  };
 
-    return (
-        <ShadowPortal id="feedback-form-root">
-            <style>{`
+  return (
+    <ShadowPortal id="feedback-form-root">
+      <style>{`
         :host {
           position: fixed;
           bottom: 24px;
@@ -165,41 +175,41 @@ export function FeedbackForm() {
         }
       `}</style>
 
-            <button
-                className="feedback-trigger"
-                onClick={() => setIsOpen(!isOpen)}
-                aria-label="Feedback"
-            >
-                {isOpen ? <X size={24} /> : <MessageSquare size={24} />}
+      <button
+        className="feedback-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="Feedback"
+      >
+        {isOpen ? <X size={24} /> : <MessageSquare size={24} />}
+      </button>
+
+      <div className={`feedback-container ${isOpen ? 'open' : ''}`}>
+        <div className="feedback-header">
+          <h2>Intelligence Feed</h2>
+          <button className="close-btn" onClick={() => setIsOpen(false)}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {isSubmitted ? (
+          <div className="success-message">
+            Transmission Received. Thank you.
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <textarea
+              placeholder="Report anomalies or suggest improvements..."
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              required
+            />
+            <button type="submit" className="submit-btn" disabled={!feedback.trim()}>
+              <Send size={16} />
+              Transmit
             </button>
-
-            <div className={`feedback-container ${isOpen ? 'open' : ''}`}>
-                <div className="feedback-header">
-                    <h2>Intelligence Feed</h2>
-                    <button className="close-btn" onClick={() => setIsOpen(false)}>
-                        <X size={18} />
-                    </button>
-                </div>
-
-                {isSubmitted ? (
-                    <div className="success-message">
-                        Transmission Received. Thank you.
-                    </div>
-                ) : (
-                    <form onSubmit={handleSubmit}>
-                        <textarea
-                            placeholder="Report anomalies or suggest improvements..."
-                            value={feedback}
-                            onChange={(e) => setFeedback(e.target.value)}
-                            required
-                        />
-                        <button type="submit" className="submit-btn" disabled={!feedback.trim()}>
-                            <Send size={16} />
-                            Transmit
-                        </button>
-                    </form>
-                )}
-            </div>
-        </ShadowPortal>
-    );
+          </form>
+        )}
+      </div>
+    </ShadowPortal>
+  );
 }

@@ -103,9 +103,7 @@ export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats
 
 async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, time: Date, todayMax: number, todayMin: number } | undefined> {
     try {
-        // Fetch both current and daily (for today's high/low) in one call
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&current=temperature_2m,precipitation&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FChicago&forecast_days=1`;
-        const res = await fetch(url);
+        const res = await fetch('/api/weather?type=current');
         if (res.ok) {
             const json = await res.json();
             if (json.current && json.current.temperature_2m !== undefined) {
@@ -119,7 +117,8 @@ async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, ti
             }
         }
     } catch (e) {
-        console.error("Failed to fetch current weather:", e);
+        // Internal errors are logged but not exposed with full external URLs
+        console.error("Weather service sync failed");
     }
     return undefined;
 }
@@ -172,8 +171,7 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
         const startStr = start.toISOString().split('T')[0];
         const endStr = end.toISOString().split('T')[0];
 
-        const precipUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=41.9742&longitude=-87.9073&start_date=${startStr}&end_date=${endStr}&daily=rain_sum,snowfall_sum&timezone=America%2FChicago`;
-        const res = await fetch(precipUrl);
+        const res = await fetch(`/api/weather?type=archive&start=${startStr}&end=${endStr}`);
         if (res.ok) {
             const apiData = await res.json();
             if (apiData.daily && apiData.daily.time) {
@@ -214,10 +212,8 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
 export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
     const currentInfo = await fetchCurrentWeather();
     try {
-        // Use Forecast API with past_days=7 for more reliable real-time updates
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,rain_sum,snowfall_sum&temperature_unit=fahrenheit&timezone=America%2FChicago&past_days=7&forecast_days=1`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Weather API error: ${response.statusText}`);
+        const response = await fetch('/api/weather?type=forecast_past');
+        if (!response.ok) throw new Error(`Weather API error`);
 
         const apiData = await response.json();
 

@@ -243,18 +243,29 @@ class UniversalFeedbackWidget extends HTMLElement {
     });
 
     const form = this._shadowRoot.querySelector('form');
-    form?.addEventListener('submit', (e) => {
+    form?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const textarea = this._shadowRoot.querySelector('textarea');
       if (textarea?.value.trim()) {
-        console.log('Feedback submitted:', textarea.value);
-        const container = this._shadowRoot.querySelector('.feedback-container');
-        container?.classList.add('success');
-        setTimeout(() => {
-          container?.classList.remove('success');
-          textarea.value = '';
-          this.isOpen = false;
-        }, 3000);
+        try {
+          const res = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ feedback: textarea.value }),
+          });
+
+          if (res.ok) {
+            const container = this._shadowRoot.querySelector('.feedback-container');
+            container?.classList.add('success');
+            setTimeout(() => {
+              container?.classList.remove('success');
+              textarea.value = '';
+              this.isOpen = false;
+            }, 3000);
+          }
+        } catch (err) {
+          console.error("Transmission error");
+        }
       }
     });
   }
