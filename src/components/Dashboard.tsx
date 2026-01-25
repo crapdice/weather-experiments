@@ -11,6 +11,7 @@ import { ThermalTopo } from './ThermalTopo';
 import { RadialCompass } from './RadialCompass';
 import { WinterIntensity } from './WinterIntensity';
 import { PredictiveLab } from './PredictiveLab';
+import { SunriseChart } from './SunriseChart';
 import { loadWeatherData, refreshWeatherData, WeatherRecord, ClimateStats } from '@/utils/weatherData';
 
 export function Dashboard() {
@@ -173,6 +174,7 @@ export function Dashboard() {
                 <button className={labTab === 'topo' ? 'active' : ''} onClick={() => setLabTab('topo')}>3D Thermal Topo</button>
                 <button className={labTab === 'radial' ? 'active' : ''} onClick={() => setLabTab('radial')}>Radial Compass</button>
                 <button className={labTab === 'winter' ? 'active' : ''} onClick={() => setLabTab('winter')}>Winter Intensity</button>
+                <button className={labTab === 'sunrise' ? 'active' : ''} onClick={() => setLabTab('sunrise')}>Daylight Cycle</button>
                 <button className={labTab === 'predictive' ? 'active' : ''} onClick={() => setLabTab('predictive')}>Predictive Lab</button>
               </div>
               <div className="lab-content">
@@ -180,6 +182,7 @@ export function Dashboard() {
                 {labTab === 'topo' && data.length > 0 && <ThermalTopo data={data} />}
                 {labTab === 'radial' && data.length > 0 && <RadialCompass data={data} />}
                 {labTab === 'winter' && data.length > 0 && <WinterIntensity data={data} />}
+                {labTab === 'sunrise' && data.length > 0 && <SunriseChart data={data} />}
                 {labTab === 'predictive' && data.length > 0 && <PredictiveLab data={data} />}
               </div>
             </div>

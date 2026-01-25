@@ -16,6 +16,8 @@ export interface WeatherRecord {
     MoonPhase?: number;
     HDD?: number;
     GDD?: number;
+    Sunrise?: Date;
+    Sunset?: Date;
 }
 
 export interface ClimateStats {
@@ -37,7 +39,7 @@ export interface ClimateStats {
 }
 
 export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats: ClimateStats } {
-    const data: WeatherRecord[] = rawData.map((d: any) => {
+    const data: WeatherRecord[] = rawData.map((d: WeatherRecord) => {
         const date = new Date(d.Date);
         return {
             Date: date,
@@ -49,6 +51,7 @@ export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats
             DayOfYear: getDayOfYear(date),
             Year: date.getFullYear(),
             MoonPhase: getMoonPhase(date),
+            ...getSunTimes(date),
         };
     }).filter(d => !isNaN(d.Date.getTime()));
 
@@ -250,7 +253,7 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
             Snow: d.Snow,
         }));
 
-        const { data: finalData, stats: finalStats } = processAndEnrich([...rawCurrent, ...uniqueNew]);
+        const { data: finalData } = processAndEnrich([...rawCurrent, ...uniqueNew]);
         return ensureTodayRecord(finalData, currentInfo);
     } catch (e) {
         console.error("Refresh failed:", e);
@@ -315,6 +318,15 @@ function getDayOfYear(date: Date): number {
     const oneDay = 1000 * 60 * 60 * 24;
     return Math.floor(diff / oneDay);
 }
+
+function getSunTimes(date: Date): { Sunrise: Date, Sunset: Date } {
+    const times = SunCalc.getTimes(date, 41.9742, -87.9073);
+    return {
+        Sunrise: times.sunrise,
+        Sunset: times.sunset
+    };
+}
+
 
 export function formatDateKey(date: Date): string {
     const y = date.getFullYear();
