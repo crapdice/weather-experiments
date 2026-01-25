@@ -40,6 +40,12 @@ export interface ClimateStats {
     currentTempTime?: Date;
     todayMax?: number;
     todayMin?: number;
+    todayRain?: number;
+    todaySnow?: number;
+    currentWind?: number;
+    currentGust?: number;
+    todayPercentile?: number; // 0-100 rank of today's mean temp vs history
+    lastSimilarDate?: Date;
 }
 
 export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats: ClimateStats } {
@@ -105,11 +111,11 @@ export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats
         d.GDD = Math.max(0, d['Avg Temp (°F)'] - 50);
     }
 
-    const stats = calculateStats(data);
+    let stats = calculateStats(data);
     return { data, stats };
 }
 
-async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, time: Date, todayMax: number, todayMin: number } | undefined> {
+async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number } | undefined> {
     try {
         const res = await fetch('/api/weather?type=current');
         if (res.ok) {
@@ -118,9 +124,13 @@ async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, ti
                 return {
                     temp: json.current.temperature_2m,
                     precip: json.current.precipitation || 0,
+                    wind: json.current.wind_speed_10m || 0,
+                    gust: json.current.wind_gusts_10m || 0,
                     time: new Date(json.current.time),
                     todayMax: json.daily.temperature_2m_max[0],
-                    todayMin: json.daily.temperature_2m_min[0]
+                    todayMin: json.daily.temperature_2m_min[0],
+                    todayRain: json.daily.rain_sum?.[0] || 0,
+                    todaySnow: json.daily.snowfall_sum?.[0] || 0
                 };
             }
         }
@@ -131,7 +141,7 @@ async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, ti
     return undefined;
 }
 
-function calculateStats(data: WeatherRecord[]): ClimateStats {
+function calculateStats(data: WeatherRecord[], updatedStats?: ClimateStats): ClimateStats {
     const last30 = data.slice(-30);
     const avgTempAll = d3.mean(data, d => d['Avg Temp (°F)']) || 0;
     const recentAvg = d3.mean(last30, d => d['Avg Temp (°F)']) || 0;
@@ -162,8 +172,50 @@ function calculateStats(data: WeatherRecord[]): ClimateStats {
         heatDays,
         volatility,
         decadalDelta,
-        lastUpdate: data[data.length - 1].Date
+        lastUpdate: data[data.length - 1].Date,
+        todayPercentile: calculatePercentile(data, updatedStats?.todayMax, updatedStats?.todayMin),
+        lastSimilarDate: findLastSimilarDate(data, updatedStats?.todayMax, updatedStats?.todayMin)
     };
+}
+
+function findLastSimilarDate(data: WeatherRecord[], todayMax?: number, todayMin?: number): Date | undefined {
+    if (todayMax === undefined || todayMin === undefined) return undefined;
+    const todayMean = (todayMax + todayMin) / 2;
+    // If today is colder than median (approx 50F), look for <=, else >=
+    const isCold = todayMean < 50;
+
+    // Search backwards skipping the very last record if it matches today (to find the *previous* time)
+    // Assuming data is sorted by date.
+    // If date is today, skip it.
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    for (let i = data.length - 1; i >= 0; i--) {
+        const d = data[i];
+        if (d.Date.toISOString().split('T')[0] === todayStr) continue;
+
+        if (isCold) {
+            if (d['Avg Temp (°F)'] <= todayMean) return d.Date;
+        } else {
+            if (d['Avg Temp (°F)'] >= todayMean) return d.Date;
+        }
+    }
+    return undefined;
+}
+
+function calculatePercentile(data: WeatherRecord[], todayMax?: number, todayMin?: number): number | undefined {
+    if (todayMax === undefined || todayMin === undefined) return undefined;
+
+    const todayMean = (todayMax + todayMin) / 2;
+    const todayDOY = getDayOfYear(new Date());
+
+    // Filter for all historical records matching today's DOY
+    const historical = data.filter(d => d.DayOfYear === todayDOY);
+    if (historical.length === 0) return undefined;
+
+    // Count how many years were colder than today
+    const colderYears = historical.filter(d => d['Avg Temp (°F)'] < todayMean).length;
+
+    return (colderYears / historical.length) * 100;
 }
 
 export async function loadWeatherData(url: string): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
@@ -182,6 +234,12 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
         result.stats.currentTempTime = currentInfo.time;
         result.stats.todayMax = currentInfo.todayMax;
         result.stats.todayMin = currentInfo.todayMin;
+        result.stats.todayRain = currentInfo.todayRain;
+        result.stats.todaySnow = currentInfo.todaySnow;
+        result.stats.currentWind = currentInfo.wind;
+        result.stats.currentGust = currentInfo.gust;
+        result.stats.todayPercentile = calculatePercentile(result.data, currentInfo.todayMax, currentInfo.todayMin);
+        result.stats.lastSimilarDate = findLastSimilarDate(result.data, currentInfo.todayMax, currentInfo.todayMin);
     }
 
     return result;
@@ -238,7 +296,7 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
     }
 }
 
-function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, precip: number, time: Date, todayMax: number, todayMin: number }): { data: WeatherRecord[], stats: ClimateStats } {
+function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number }): { data: WeatherRecord[], stats: ClimateStats } {
     const todayStr = new Date().toISOString().split('T')[0];
     const hasToday = data.some(d => d.Date.toISOString().split('T')[0] === todayStr);
 
@@ -273,6 +331,12 @@ function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, 
         result.stats.currentTempTime = currentInfo.time;
         result.stats.todayMax = currentInfo.todayMax;
         result.stats.todayMin = currentInfo.todayMin;
+        result.stats.todayRain = currentInfo.todayRain;
+        result.stats.todaySnow = currentInfo.todaySnow;
+        result.stats.currentWind = currentInfo.wind;
+        result.stats.currentGust = currentInfo.gust;
+        result.stats.todayPercentile = calculatePercentile(data, currentInfo.todayMax, currentInfo.todayMin);
+        result.stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
         return result;
     }
 
@@ -283,6 +347,12 @@ function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, 
         stats.currentTempTime = currentInfo.time;
         stats.todayMax = currentInfo.todayMax;
         stats.todayMin = currentInfo.todayMin;
+        stats.todayRain = currentInfo.todayRain;
+        stats.todaySnow = currentInfo.todaySnow;
+        stats.currentWind = currentInfo.wind;
+        stats.currentGust = currentInfo.gust;
+        stats.todayPercentile = calculatePercentile(data, currentInfo.todayMax, currentInfo.todayMin);
+        stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
     }
     return { data, stats };
 }

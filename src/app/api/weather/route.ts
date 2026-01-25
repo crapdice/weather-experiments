@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
 
     try {
         if (type === 'current') {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&current=temperature_2m,precipitation&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FChicago&forecast_days=1`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=41.9742&longitude=-87.9073&current=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m&daily=temperature_2m_max,temperature_2m_min,rain_sum,snowfall_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FChicago&forecast_days=1&wind_speed_unit=mph`;
             const res = await fetch(url);
             if (!res.ok) throw new Error('Weather API error');
             const data = await res.json();

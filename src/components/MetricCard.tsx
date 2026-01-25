@@ -11,6 +11,8 @@ interface MetricCardProps {
   subValues?: {
     high: string | number;
     low: string | number;
+    highLabel?: string;
+    lowLabel?: string;
   };
 }
 
@@ -27,11 +29,11 @@ export function MetricCard({ label, value, delta, help, accent = 'primary', subV
         {subValues && (
           <div className="sub-values">
             <div className="sub-value hgh">
-              <span className="sub-label">H</span>
+              <span className="sub-label">{subValues.highLabel || 'H'}</span>
               <span className="sub-num">{subValues.high}</span>
             </div>
             <div className="sub-value low">
-              <span className="sub-label">L</span>
+              <span className="sub-label">{subValues.lowLabel || 'L'}</span>
               <span className="sub-num">{subValues.low}</span>
             </div>
           </div>

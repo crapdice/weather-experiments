@@ -123,11 +123,86 @@ export function Dashboard() {
             help="The latest temperature reading from KORD via Open-Meteo, with today's high and low."
           />
           <MetricCard
-            label="Real-time Precip"
-            value={stats?.currentPrecip !== undefined ? `${stats.currentPrecip.toFixed(2)}"` : '--"'}
-            delta="Current Intensity"
-            accent="primary"
-            help="The latest precipitation reading from KORD (Rain + Snow) in inches."
+            label="Historical Rank"
+            value={stats?.todayPercentile !== undefined ?
+              (stats.todayPercentile > 50 ? `${stats.todayPercentile.toFixed(0)}th %` : `${(100 - stats.todayPercentile).toFixed(0)}th %`)
+              : '--%'}
+            delta={stats?.todayPercentile !== undefined ?
+              (stats.todayPercentile > 90 ? "Extreme Heat" :
+                stats.todayPercentile > 75 ? "Warmer than Avg" :
+                  stats.todayPercentile < 10 ? "Extreme Cold" :
+                    stats.todayPercentile < 25 ? "Cooler than Avg" : "Near Normal")
+              : "Analyzing..."}
+            accent={stats?.todayPercentile !== undefined ?
+              (stats.todayPercentile > 75 ? 'ro' : stats.todayPercentile < 25 ? 'primary' : 'secondary')
+              : 'secondary'}
+            subValues={stats?.lastSimilarDate ? {
+              high: stats.lastSimilarDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }),
+              low: '',
+              highLabel: 'LAST TIME',
+              lowLabel: ''
+            } : undefined}
+            help={`How today's average temperature compares to all other recorded instances of this specific day vs the 85-year history.`}
+          />
+          {(() => {
+            const rain = stats?.todayRain || 0;
+            const snow = stats?.todaySnow || 0;
+            const total = (stats?.currentPrecip || 0); // Open-Meteo 'precipitation' is liquid eq
+
+            if (rain > 0 && snow > 0) {
+              return (
+                <MetricCard
+                  label="Active Wintry Mix"
+                  value={`${total.toFixed(2)}"`}
+                  delta="Total Liquid Eq."
+                  accent="secondary"
+                  subValues={{
+                    high: `${rain.toFixed(2)}"`,
+                    low: `${snow.toFixed(1)}"`,
+                    highLabel: 'RAIN',
+                    lowLabel: 'SNOW'
+                  }}
+                  help="Mixed precipitation observed today. Values show total liquid equivalent, plus estimated rain and snow accumulation."
+                />
+              )
+            } else if (snow > 0) {
+              return (
+                <MetricCard
+                  label="Snowfall Today"
+                  value={`${snow.toFixed(1)}"`}
+                  delta=" accumulation"
+                  accent="primary"
+                  help="Total snowfall accumulation recorded today."
+                />
+              )
+            } else if (rain > 0) {
+              return (
+                <MetricCard
+                  label="Rainfall Today"
+                  value={`${rain.toFixed(2)}"`}
+                  delta=" accumulation"
+                  accent="primary"
+                  help="Total rainfall accumulation recorded today."
+                />
+              )
+            } else {
+              return (
+                <MetricCard
+                  label="Precipitation"
+                  value="0.00&quot;"
+                  delta="Dry Conditions"
+                  accent="primary"
+                  help="No measurable precipitation recorded today."
+                />
+              )
+            }
+          })()}
+          <MetricCard
+            label="Current Wind"
+            value={stats?.currentWind !== undefined ? `${stats.currentWind.toFixed(1)} mph` : '-- mph'}
+            delta={stats?.currentGust ? `Gusts ${stats.currentGust.toFixed(1)} mph` : 'Calm'}
+            accent={stats?.currentWind && stats.currentWind > 15 ? 'ro' : 'secondary'}
+            help="Current sustained wind speed and peak gusts at O'Hare."
           />
           <MetricCard
             label="All-Time Max"
