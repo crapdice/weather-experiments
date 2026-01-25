@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const CSV_PATH = path.join(process.cwd(), 'public/data/chicago_weather_enriched.csv');
+const CSV_PATH = path.join(process.cwd(), 'public/data/chicago_weather_v86.csv');
 const LAT = 41.9742;
 const LON = -87.9073;
 
@@ -84,8 +84,8 @@ async function sync() {
 
             if (max === null || min === null || avg === null) continue;
 
-            // Format matches CSV: YYYY-MM-DD 06:00:00
-            const row = `${date} 06:00:00,${max},${min},${avg},${precip},${snow},${wind},${gust}`;
+            // Format matches ISO 8601
+            const row = `${date},${max},${min},${avg},${precip},${snow},${wind},${gust}`;
             newLines.push(row);
         }
 

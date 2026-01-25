@@ -25,7 +25,7 @@ export function Dashboard() {
   useEffect(() => {
     async function init() {
       try {
-        const { data, stats } = await loadWeatherData('/data/chicago_weather_enriched.csv');
+        const { data, stats } = await loadWeatherData('/data/chicago_weather_v86.csv');
         setData(data);
         setStats(stats);
       } catch (err) {

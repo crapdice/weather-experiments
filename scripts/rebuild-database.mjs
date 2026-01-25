@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const CSV_PATH = path.join(process.cwd(), 'public/data/chicago_weather_enriched.csv');
+const CSV_PATH = path.join(process.cwd(), 'public/data/chicago_weather_v86.csv');
 const LAT = 41.9742;
 const LON = -87.9073;
 const START_DATE = '1940-01-01';
@@ -60,8 +60,8 @@ async function rebuild() {
             const wind = daily.wind_speed_10m_max[i] ?? '';
             const gust = daily.wind_gusts_10m_max[i] ?? '';
 
-            // Formatting date to match previous CSV style: YYYY-MM-DD 06:00:00
-            rows.push(`${date} 06:00:00,${maxTemp},${minTemp},${avgTemp},${precip},${snow},${wind},${gust}`);
+            // Formatting date to match ISO 8601: YYYY-MM-DD
+            rows.push(`${date},${maxTemp},${minTemp},${avgTemp},${precip},${snow},${wind},${gust}`);
         }
 
         fs.writeFileSync(CSV_PATH, rows.join('\n'));

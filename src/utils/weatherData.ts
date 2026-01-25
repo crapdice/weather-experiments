@@ -164,8 +164,8 @@ function calculateStats(data: WeatherRecord[]): ClimateStats {
 
 export async function loadWeatherData(url: string): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
     // Point to the new enriched dataset by default if the url is the old one
-    const targetUrl = url.includes('chicago_weather_50years.csv')
-        ? url.replace('chicago_weather_50years.csv', 'chicago_weather_enriched.csv')
+    const targetUrl = url.includes('chicago_weather_50years.csv') || url.includes('chicago_weather_enriched.csv')
+        ? '/data/chicago_weather_v86.csv'
         : url;
 
     const rawData = await d3.csv(targetUrl);
