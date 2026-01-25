@@ -1,4 +1,6 @@
 import * as d3 from 'd3';
+import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear } from './statisticalEngine';
+import { calculateSeasonalRank, SeasonalRank } from './seasonalEngine';
 
 export interface WeatherRecord {
     Date: Date;
@@ -46,6 +48,11 @@ export interface ClimateStats {
     currentGust?: number;
     todayPercentile?: number; // 0-100 rank of today's mean temp vs history
     lastSimilarDate?: Date;
+    zScore?: number;
+    currentStreak?: { count: number, startDate: Date, type: string };
+    analogYear?: { year: number, similarityScore: number };
+    seasonalRain?: SeasonalRank;
+    seasonalSnow?: SeasonalRank;
 }
 
 export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats: ClimateStats } {
@@ -124,8 +131,8 @@ async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, wi
                 return {
                     temp: json.current.temperature_2m,
                     precip: json.current.precipitation || 0,
-                    wind: json.current.wind_speed_10m || 0,
-                    gust: json.current.wind_gusts_10m || 0,
+                    wind: (json.current.wind_speed_10m || 0) * 0.621371,
+                    gust: (json.current.wind_gusts_10m || 0) * 0.621371,
                     time: new Date(json.current.time),
                     todayMax: json.daily.temperature_2m_max[0],
                     todayMin: json.daily.temperature_2m_min[0],
@@ -173,7 +180,6 @@ function calculateStats(data: WeatherRecord[], updatedStats?: ClimateStats): Cli
         volatility,
         decadalDelta,
         lastUpdate: data[data.length - 1].Date,
-        todayPercentile: calculatePercentile(data, updatedStats?.todayMax, updatedStats?.todayMin),
         lastSimilarDate: findLastSimilarDate(data, updatedStats?.todayMax, updatedStats?.todayMin)
     };
 }
@@ -226,23 +232,81 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
 
     const rawData = await d3.csv(targetUrl);
     const result = processAndEnrich(rawData);
+    const data = result.data; // Alias for easier access
 
     const currentInfo = await fetchCurrentWeather();
     if (currentInfo) {
-        result.stats.currentTemp = currentInfo.temp;
-        result.stats.currentPrecip = currentInfo.precip;
-        result.stats.currentTempTime = currentInfo.time;
-        result.stats.todayMax = currentInfo.todayMax;
-        result.stats.todayMin = currentInfo.todayMin;
-        result.stats.todayRain = currentInfo.todayRain;
-        result.stats.todaySnow = currentInfo.todaySnow;
-        result.stats.currentWind = currentInfo.wind;
-        result.stats.currentGust = currentInfo.gust;
-        result.stats.todayPercentile = calculatePercentile(result.data, currentInfo.todayMax, currentInfo.todayMin);
-        result.stats.lastSimilarDate = findLastSimilarDate(result.data, currentInfo.todayMax, currentInfo.todayMin);
+        // Statistical Engine Integrations
+        hydrateRealtimeStats(result.stats, result.data, currentInfo);
     }
 
     return result;
+}
+
+function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], currentInfo: { temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number }) {
+    stats.currentTemp = currentInfo.temp;
+    stats.currentPrecip = currentInfo.precip;
+    stats.currentTempTime = currentInfo.time;
+    stats.todayMax = currentInfo.todayMax;
+    stats.todayMin = currentInfo.todayMin;
+    stats.todayRain = currentInfo.todayRain;
+    stats.todaySnow = currentInfo.todaySnow;
+    stats.currentWind = currentInfo.wind;
+    stats.currentGust = currentInfo.gust;
+
+    const doy = getDayOfYear(new Date());
+    const historyForDay = data.filter(d => d.DayOfYear === doy).map(d => d['Avg Temp (°F)']);
+
+    // 1. Sigma Score
+    stats.zScore = calculateZScore(currentInfo.temp, historyForDay);
+
+    // 2. Percentile
+    stats.todayPercentile = calculatePercentileRank(currentInfo.temp, historyForDay);
+
+    // 3. Analog Year
+    const recentHistory = data.slice(-30);
+    const analog = findAnalogYear(recentHistory, data);
+    stats.analogYear = analog;
+
+    // 4. Streak
+    // "Consecutive days fitting the current mode (Freezing or Thawing)"
+    const isFreezing = currentInfo.temp < 32;
+    const streakFreezing = findLongestRecentStreak(data, d => isFreezing ? d['Avg Temp (°F)'] < 32 : d['Avg Temp (°F)'] >= 32);
+
+    stats.currentStreak = {
+        count: streakFreezing.count,
+        startDate: streakFreezing.startDate,
+        type: isFreezing ? 'Below Freezing' : 'Above Freezing'
+    };
+
+    // 5. Seasonal Rank
+    // Define "Season so far" from most recent record's season start
+    // Winter: Dec 1. Spring: Mar 1. Summer: Jun 1. Fall: Sept 1.
+    const lastDate = currentInfo.time;
+    const month = lastDate.getMonth();
+    let seasonStartMonth = 11; // Winter default
+    if (month >= 2 && month <= 4) seasonStartMonth = 2; // Spring
+    if (month >= 5 && month <= 7) seasonStartMonth = 5; // Summer
+    if (month >= 8 && month <= 10) seasonStartMonth = 8; // Fall
+
+    let startYear = lastDate.getFullYear();
+    if (month < seasonStartMonth) startYear--; // Handle Jan/Feb belonging to previous Dec's winter start
+    if (month === 11 && seasonStartMonth === 11) startYear = lastDate.getFullYear(); // Dec 1 starts in current year
+
+    const seasonStartDate = new Date(startYear, seasonStartMonth, 1);
+
+    // Filter "Current Season" records from the main dataset
+    const currentSeasonData = data.filter(d => d.Date >= seasonStartDate);
+
+    // We need to add the "Simulated" today record if it's not in 'data' yet (often it isn't if refreshing)
+    // But 'hydrate' modifies stats, doesn't add rows.
+    // We will pass filtered data to engine.
+
+    stats.seasonalSnow = calculateSeasonalRank(currentSeasonData, data, 'snow');
+    stats.seasonalRain = calculateSeasonalRank(currentSeasonData, data, 'rain');
+
+    // Restore last similar date logic if we want it
+    stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
 }
 
 export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
@@ -326,33 +390,13 @@ function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, 
             'Max Wind Gust (mph)': d['Max Wind Gust (mph)'],
         })));
 
-        result.stats.currentTemp = currentInfo.temp;
-        result.stats.currentPrecip = currentInfo.precip;
-        result.stats.currentTempTime = currentInfo.time;
-        result.stats.todayMax = currentInfo.todayMax;
-        result.stats.todayMin = currentInfo.todayMin;
-        result.stats.todayRain = currentInfo.todayRain;
-        result.stats.todaySnow = currentInfo.todaySnow;
-        result.stats.currentWind = currentInfo.wind;
-        result.stats.currentGust = currentInfo.gust;
-        result.stats.todayPercentile = calculatePercentile(data, currentInfo.todayMax, currentInfo.todayMin);
-        result.stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
+        hydrateRealtimeStats(result.stats, result.data, currentInfo);
         return result;
     }
 
     const stats = calculateStats(data);
     if (currentInfo) {
-        stats.currentTemp = currentInfo.temp;
-        stats.currentPrecip = currentInfo.precip;
-        stats.currentTempTime = currentInfo.time;
-        stats.todayMax = currentInfo.todayMax;
-        stats.todayMin = currentInfo.todayMin;
-        stats.todayRain = currentInfo.todayRain;
-        stats.todaySnow = currentInfo.todaySnow;
-        stats.currentWind = currentInfo.wind;
-        stats.currentGust = currentInfo.gust;
-        stats.todayPercentile = calculatePercentile(data, currentInfo.todayMax, currentInfo.todayMin);
-        stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
+        hydrateRealtimeStats(stats, data, currentInfo);
     }
     return { data, stats };
 }
