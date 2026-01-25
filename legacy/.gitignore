@@ -1,5 +1,0 @@
-.cache.sqlite
-__pycache__/
-*.pyc
-.streamlit/
-*.parquet.tmp
