@@ -266,7 +266,7 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
     // 2. Fetch Current + Recent History (Patch Layer)
     const currentInfo = await fetchCurrentWeather();
 
-    let mergedRawData = rawDataCSV;
+    let mergedRawData: any[] = rawDataCSV;
 
     if (currentInfo && currentInfo.recentHistory) {
         // Convert CSV rows to a Map for easy upsert by Date String
