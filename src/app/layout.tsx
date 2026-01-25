@@ -4,7 +4,7 @@ import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "Chicago O'Hare Weather Intelligence",
-  description: "High-fidelity climate data visualization for KORD (1974 - 2026)",
+  description: "High-fidelity climate data visualization for KORD (1940 - 2026)",
 };
 
 export const viewport: Viewport = {

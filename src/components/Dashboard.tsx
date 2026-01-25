@@ -106,7 +106,7 @@ export function Dashboard() {
         <header className="header">
           <h1 className="title">KORD Intelligence</h1>
           <p className="subtitle">
-            Climate Data for Chicago O&apos;Hare | 1974 - {stats?.lastUpdate.getFullYear()}
+            Climate Data for Chicago O&apos;Hare | {data.length > 0 ? data[0].Year : '1940'} - {stats?.lastUpdate.getFullYear()}
           </p>
         </header>
 
@@ -133,21 +133,21 @@ export function Dashboard() {
             label="All-Time Max"
             value={`${stats?.maxTemp.toFixed(1)}°F`}
             delta={stats?.maxTempDate.getFullYear().toString()}
-            help="The highest daily maximum temperature recorded at KORD between 1974 and today."
+            help={`The highest daily maximum temperature recorded at KORD between ${data[0]?.Year || '1940'} and today.`}
           />
           <MetricCard
             label="All-Time Min"
             value={`${stats?.minTemp.toFixed(1)}°F`}
             delta={stats?.minTempDate.getFullYear().toString()}
             accent="primary"
-            help="The lowest daily minimum temperature recorded at KORD between 1974 and today."
+            help={`The lowest daily minimum temperature recorded at KORD between ${data[0]?.Year || '1940'} and today.`}
           />
           <MetricCard
             label="Climate Pulse"
             value={`${stats?.pulseDelta.toFixed(2)}°F`}
-            delta="Delta vs 50y Baseline"
+            delta={`Delta vs ${data.length > 0 ? (new Date().getFullYear() - data[0].Year) : '85'}y Baseline`}
             accent="secondary"
-            help="The climatological anomaly: compares the last 30 days against the 50-year average for those same calendar days."
+            help={`The climatological anomaly: compares the last 30 days against the full archival average (since ${data[0]?.Year || '1940'}) for those same calendar days.`}
           />
           <MetricCard
             label="Decadal Shift"

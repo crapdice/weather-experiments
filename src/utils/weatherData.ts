@@ -144,8 +144,8 @@ function calculateStats(data: WeatherRecord[]): ClimateStats {
     }
     const volatility = d3.mean(diffs) || 0;
 
-    const firstDecade = data.filter(d => d.Year <= 1984);
-    const lastDecade = data.filter(d => d.Year >= 2016);
+    const firstDecade = data.filter(d => d.Year <= data[0].Year + 10);
+    const lastDecade = data.filter(d => d.Year >= data[data.length - 1].Year - 10);
     const decadalDelta = (d3.mean(lastDecade, d => d['Avg Temp (°F)']) || 0) - (d3.mean(firstDecade, d => d['Avg Temp (°F)']) || 0);
 
     return {

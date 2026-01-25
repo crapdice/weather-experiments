@@ -153,7 +153,10 @@ export function RadialCompass({ data }: Props) {
             const legend = svg.append("g")
                 .attr("transform", `translate(${chartWidth + 10}, ${margin})`);
 
-            const legendYears = [1974, 1984, 1994, 2004, 2014, 2024];
+            const startYear = years[0];
+            const endYear = years[years.length - 1];
+            const step = Math.ceil((endYear - startYear) / 5);
+            const legendYears = d3.range(startYear, endYear + 1, step);
             const legendItemHeight = 25;
 
             legend.selectAll(".legend-item")
@@ -182,7 +185,7 @@ export function RadialCompass({ data }: Props) {
             <div className="radial-header">
                 <div className="header-text">
                     <h3>Radial Climate Compass</h3>
-                    <p>Seasonal migration over 50 years. Rings move from center (cooler) to outer (warmer).</p>
+                    <p>Seasonal migration over {data.length > 0 ? (data[data.length - 1].Year - data[0].Year) : '85'} years. Rings move from center (cooler) to outer (warmer).</p>
                 </div>
                 <div className="radial-controls">
                     <label>Focus View:</label>

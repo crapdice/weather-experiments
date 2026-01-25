@@ -273,7 +273,7 @@ export function ClimateStripes({ data }: Props) {
         <div className="stripes-container">
             <div className="chart-header">
                 <h3>High-Density Climate Stripes</h3>
-                <p>Monthly temperature anomalies relative to 50-year seasonal baselines. Red: Warmer | Blue: Cooler.</p>
+                <p>Monthly temperature anomalies relative to full archival seasonal baselines. Red: Warmer | Blue: Cooler.</p>
             </div>
             <svg ref={svgRef} style={{ width: '100%' }}></svg>
             <style jsx>{`
