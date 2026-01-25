@@ -1,0 +1,31 @@
+name: Daily Weather Data Sync
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Every day at midnight UTC
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required for pushing changes back to repo
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Run sync script
+        run: node scripts/sync-data.mjs
+        
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'Antigravity Data Agent'
+          git config --global user.email 'agent@antigravity'
+          git add public/data/chicago_weather_enriched.csv
+          git diff --quiet && git diff --staged --quiet || (git commit -m "data: daily weather update [skip ci]" && git push)
