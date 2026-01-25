@@ -122,28 +122,58 @@ export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats
     return { data, stats };
 }
 
-async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number } | undefined> {
+async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number, recentHistory: WeatherRecord[] } | undefined> {
     try {
         const res = await fetch('/api/weather?type=current');
         if (res.ok) {
             const json = await res.json();
             if (json.current && json.current.temperature_2m !== undefined) {
+                // Parse Daily History (from 'daily' object which matches API structure)
+                const history: WeatherRecord[] = [];
+                if (json.daily && json.daily.time) {
+                    for (let i = 0; i < json.daily.time.length; i++) {
+                        // Skip "Today" in history if we want, but better to just include everything and let merge handle it.
+                        // Actually, forecast_days=1 means only today? No we added past_days=14.
+                        const d = new Date(json.daily.time[i] + 'T12:00:00');
+                        // Don't include "Today" (future) if it's incomplete? 
+                        // But we want today's accumulation so far.
+                        // Let's include all.
+
+                        history.push({
+                            Date: d,
+                            'Max Temp (°F)': json.daily.temperature_2m_max?.[i],
+                            'Min Temp (°F)': json.daily.temperature_2m_min?.[i],
+                            'Avg Temp (°F)': json.daily.temperature_2m_mean?.[i],
+                            'Precipitation (in)': json.daily.precipitation_sum?.[i], // API is inch now
+                            'Snowfall (in)': json.daily.snowfall_sum?.[i], // API is inch
+                            'Max Wind Speed (mph)': (json.daily.wind_speed_10m_max?.[i] || 0) * 0.621371,
+                            'Max Wind Gust (mph)': (json.daily.wind_gusts_10m_max?.[i] || 0) * 0.621371,
+                            DayOfYear: 0,
+                            Year: d.getFullYear()
+                        });
+                    }
+                }
+
                 return {
                     temp: json.current.temperature_2m,
                     precip: json.current.precipitation || 0,
                     wind: (json.current.wind_speed_10m || 0) * 0.621371,
                     gust: (json.current.wind_gusts_10m || 0) * 0.621371,
                     time: new Date(json.current.time),
-                    todayMax: json.daily.temperature_2m_max[0],
-                    todayMin: json.daily.temperature_2m_min[0],
-                    todayRain: json.daily.rain_sum?.[0] || 0,
-                    todaySnow: json.daily.snowfall_sum?.[0] || 0
+                    // With past_days=14, index 0 is 14 days ago!
+                    // We need the LAST index for "Today".
+                    todayMax: json.daily.temperature_2m_max[json.daily.time.length - 1],
+                    todayMin: json.daily.temperature_2m_min[json.daily.time.length - 1],
+                    todayRain: json.daily.rain_sum?.[json.daily.time.length - 1] || 0,
+                    todaySnow: json.daily.snowfall_sum?.[json.daily.time.length - 1] || 0,
+
+                    recentHistory: history
                 };
             }
         }
     } catch (e) {
         // Internal errors are logged but not exposed with full external URLs
-        console.error("Weather service sync failed");
+        console.error("Weather service sync failed", e);
     }
     return undefined;
 }
@@ -225,16 +255,63 @@ function calculatePercentile(data: WeatherRecord[], todayMax?: number, todayMin?
 }
 
 export async function loadWeatherData(url: string): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
-    // Point to the new enriched dataset by default if the url is the old one
+    // Point to the new enriched dataset by default
     const targetUrl = url.includes('chicago_weather_50years.csv') || url.includes('chicago_weather_enriched.csv')
         ? '/data/chicago_weather_v86.csv'
         : url;
 
-    const rawData = await d3.csv(targetUrl);
-    const result = processAndEnrich(rawData);
+    // 1. Load CSV (Base Layer)
+    const rawDataCSV = await d3.csv(targetUrl);
+
+    // 2. Fetch Current + Recent History (Patch Layer)
+    const currentInfo = await fetchCurrentWeather();
+
+    let mergedRawData = rawDataCSV;
+
+    if (currentInfo && currentInfo.recentHistory) {
+        // Convert CSV rows to a Map for easy upsert by Date String
+        // CSV dates are "YYYY-MM-DD" usually.
+        const dataMap = new Map();
+        rawDataCSV.forEach(d => {
+            // Normalized date key
+            const key = new Date(d.Date).toISOString().split('T')[0];
+            dataMap.set(key, d);
+        });
+
+        // Upsert API History
+        currentInfo.recentHistory.forEach(rec => {
+            const key = rec.Date.toISOString().split('T')[0];
+            // Convert to CSV-like structure for the enricher
+            // enricher expects string keys usually, but let's check processAndEnrich. 
+            // It expects "Avg Temp (°F)" etc.
+            const csvRow = {
+                Date: key, // Keep as string for now, enricher parses it? 
+                // processAndEnrich does: d.Date = new Date(d.Date)
+                // But wait, the API record is already typed WeatherRecord partially?
+                // Let's manually map it to the raw format if needed, or just insert it as a Record
+                // Actually processAndEnrich iterates struct.
+                // Let's make sure we match the shape processAndEnrich expects.
+                'Max Temp (°F)': rec['Max Temp (°F)'],
+                'Min Temp (°F)': rec['Min Temp (°F)'],
+                'Avg Temp (°F)': rec['Avg Temp (°F)'],
+                'Precipitation (in)': rec['Precipitation (in)'],
+                'Snowfall (in)': rec['Snowfall (in)'],
+                'Max Wind Speed (mph)': rec['Max Wind Speed (mph)'],
+                'Max Wind Gust (mph)': rec['Max Wind Gust (mph)'],
+                DayOfYear: 0, // calc in enrich
+                Year: 0 // calc in enrich
+            };
+            // We overwrite strict duplicates from CSV with fresh API data
+            dataMap.set(key, csvRow);
+        });
+
+        // Convert back to array and sort
+        mergedRawData = Array.from(dataMap.values()).sort((a, b) => new Date(a.Date).getTime() - new Date(b.Date).getTime());
+    }
+
+    const result = processAndEnrich(mergedRawData);
     const data = result.data; // Alias for easier access
 
-    const currentInfo = await fetchCurrentWeather();
     if (currentInfo) {
         // Statistical Engine Integrations
         hydrateRealtimeStats(result.stats, result.data, currentInfo);
@@ -243,7 +320,7 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
     return result;
 }
 
-function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], currentInfo: { temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number }) {
+function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], currentInfo: { temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number, recentHistory?: WeatherRecord[] }) {
     stats.currentTemp = currentInfo.temp;
     stats.currentPrecip = currentInfo.precip;
     stats.currentTempTime = currentInfo.time;
