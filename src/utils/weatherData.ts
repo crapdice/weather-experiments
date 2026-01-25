@@ -20,6 +20,8 @@ export interface WeatherRecord {
     Sunrise?: Date;
     Sunset?: Date;
     MoonPhase?: number;
+    Rain?: number;
+    Snow?: number;
 }
 
 export interface ClimateStats {
@@ -55,6 +57,8 @@ export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats
             DayOfYear: getDayOfYear(date),
             Year: date.getFullYear(),
             MoonPhase: getMoonPhase(date),
+            Rain: +d['Precipitation (in)'] || 0,
+            Snow: +d['Snowfall (in)'] || 0,
             ...getSunTimes(date),
         };
     }).filter(d => !isNaN(d.Date.getTime()));
