@@ -47,8 +47,11 @@ export function OverviewChart({ data }: Props) {
     // Initialize date range to "1Y" on load
     useEffect(() => {
         if (data.length && !dateRange) {
-            const end = data[data.length - 1].Date;
-            const start = new Date(end);
+            const lastDataDate = data[data.length - 1].Date;
+            const end = new Date(lastDataDate);
+            end.setDate(end.getDate() + 1); // Add 1-day buffer for UI stability
+
+            const start = new Date(lastDataDate);
             start.setFullYear(start.getFullYear() - 1);
             setDateRange([start < data[0].Date ? data[0].Date : start, end]);
         }
@@ -56,13 +59,16 @@ export function OverviewChart({ data }: Props) {
 
     const handleTimeframeClick = (tf: typeof TIMEFRAMES[0]) => {
         if (!data.length) return;
-        const end = data[data.length - 1].Date;
+        const lastDataDate = data[data.length - 1].Date;
+        const bufferedEnd = new Date(lastDataDate);
+        bufferedEnd.setDate(bufferedEnd.getDate() + 1);
+
         let start: Date;
 
         if (tf.unit === 'all') {
             start = data[0].Date;
         } else {
-            start = new Date(end);
+            start = new Date(lastDataDate);
             if (tf.unit === 'month') {
                 start.setMonth(start.getMonth() - tf.value);
             } else {
@@ -70,7 +76,7 @@ export function OverviewChart({ data }: Props) {
             }
             if (start < data[0].Date) start = data[0].Date;
         }
-        setDateRange([start, end]);
+        setDateRange([start, bufferedEnd]);
     };
 
     useEffect(() => {
@@ -101,8 +107,12 @@ export function OverviewChart({ data }: Props) {
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         // --- SCALES ---
+        const lastDataDate = data[data.length - 1].Date;
+        const bufferedMaxDate = new Date(lastDataDate);
+        bufferedMaxDate.setDate(bufferedMaxDate.getDate() + 1);
+
         const xFull = d3.scaleTime()
-            .domain(d3.extent(data, d => d.Date) as [Date, Date])
+            .domain([data[0].Date, bufferedMaxDate])
             .range([0, width]);
 
         const x = d3.scaleTime()
