@@ -12,44 +12,13 @@ import { RadialCompass } from './RadialCompass';
 import { WinterIntensity } from './WinterIntensity';
 import { PredictiveLab } from './PredictiveLab';
 import { SunriseChart } from './SunriseChart';
-import { loadWeatherData, refreshWeatherData, WeatherRecord, ClimateStats } from '@/utils/weatherData';
+import { useWeather } from '@/hooks/useWeather';
+import { WeatherRecord, ClimateStats } from '@/utils/weatherData';
 
 export function Dashboard() {
-  const [data, setData] = useState<WeatherRecord[]>([]);
-  const [stats, setStats] = useState<ClimateStats | null>(null);
+  const { data, stats, loading, refreshing, handleRefresh } = useWeather();
   const [view, setView] = useState('overview');
   const [labTab, setLabTab] = useState('stripes');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    async function init() {
-      try {
-        const { data, stats } = await loadWeatherData('/data/chicago_weather_v86.csv');
-        setData(data);
-        setStats(stats);
-      } catch (err) {
-        console.error("Failed to load weather data:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    init();
-  }, []);
-
-  const handleRefresh = async () => {
-    if (refreshing || data.length === 0) return;
-    setRefreshing(true);
-    try {
-      const { data: newData, stats: newStats } = await refreshWeatherData(data);
-      setData(newData);
-      setStats(newStats);
-    } catch (err) {
-      console.error("Refresh failed:", err);
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   if (loading) {
     return (

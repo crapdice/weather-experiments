@@ -1,13 +1,5 @@
-import { WeatherRecord } from './weatherData';
+import { WeatherRecord, SeasonalRank } from './weatherData';
 import * as d3 from 'd3';
-
-export interface SeasonalRank {
-    rank: number;
-    totalYears: number;
-    value: number;
-    percentile: number;
-    seasonName: string;
-}
 
 // Helper to determine the "Season Year"
 // Winter: Dec-Feb.  Dec 2023 is part of "Winter 2024". Jan 2024 is "Winter 2024".

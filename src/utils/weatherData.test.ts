@@ -28,7 +28,10 @@ describe('weatherData integration', () => {
                 temperature_2m_min: [20],
                 temperature_2m_mean: [25],
                 rain_sum: [0],
-                snowfall_sum: [0]
+                precipitation_sum: [0],
+                snowfall_sum: [0],
+                wind_speed_10m_max: [10],
+                wind_gusts_10m_max: [15]
             }
         };
 
@@ -36,17 +39,22 @@ describe('weatherData integration', () => {
             current: {
                 time: '2026-01-22T08:00',
                 temperature_2m: 28.5
+            },
+            daily: {
+                time: ['2026-01-22'],
+                temperature_2m_max: [30],
+                temperature_2m_min: [20]
             }
         };
 
         (global.fetch as any).mockImplementation((url: string) => {
-            if (url.includes('forecast') && url.includes('current')) {
+            if (url.includes('type=current')) {
                 return Promise.resolve({
                     ok: true,
                     json: () => Promise.resolve(mockApiCurrent)
                 });
             }
-            if (url.includes('forecast')) {
+            if (url.includes('type=forecast_past')) {
                 return Promise.resolve({
                     ok: true,
                     json: () => Promise.resolve(mockApiDaily)
@@ -55,8 +63,8 @@ describe('weatherData integration', () => {
             return Promise.resolve({ ok: false });
         });
 
-        // Use the current date for the test expectation
-        const todayStr = new Date().toISOString().split('T')[0];
+        // Use the date from the mock current weather
+        const todayStr = '2026-01-22';
 
         const result = await refreshWeatherData(mockCurrentData);
 

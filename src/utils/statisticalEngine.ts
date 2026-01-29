@@ -1,5 +1,89 @@
-import { WeatherRecord } from './weatherData';
+import { WeatherRecord, ClimateStats } from './weatherData';
 import * as d3 from 'd3';
+
+export function calculateStats(data: WeatherRecord[], updatedStats?: ClimateStats): ClimateStats {
+    const last30 = data.slice(-30);
+    const avgTempAll = d3.mean(data, d => d['Avg Temp (°F)']) || 0;
+    const recentAvg = d3.mean(last30, d => d['Avg Temp (°F)']) || 0;
+
+    const maxRec = data.reduce((prev, curr) => prev['Max Temp (°F)'] > curr['Max Temp (°F)'] ? prev : curr);
+    const minRec = data.reduce((prev, curr) => prev['Min Temp (°F)'] < curr['Min Temp (°F)'] ? prev : curr);
+
+    const frostDays = data.filter(d => d['Min Temp (°F)'] < 0).length;
+    const heatDays = data.filter(d => d['Max Temp (°F)'] > 95).length;
+
+    const diffs = [];
+    for (let i = 1; i < data.length; i++) {
+        diffs.push(Math.abs(data[i]['Avg Temp (°F)'] - data[i - 1]['Avg Temp (°F)']));
+    }
+    const volatility = d3.mean(diffs) || 0;
+
+    const firstDecade = data.filter(d => d.Year <= data[0].Year + 10);
+    const lastDecade = data.filter(d => d.Year >= data[data.length - 1].Year - 10);
+    const decadalDelta = (d3.mean(lastDecade, d => d['Avg Temp (°F)']) || 0) - (d3.mean(firstDecade, d => d['Avg Temp (°F)']) || 0);
+
+    return {
+        maxTemp: maxRec['Max Temp (°F)'],
+        maxTempDate: maxRec.Date,
+        minTemp: minRec['Min Temp (°F)'],
+        minTempDate: minRec.Date,
+        pulseDelta: recentAvg - avgTempAll,
+        frostDays,
+        heatDays,
+        volatility,
+        decadalDelta,
+        lastUpdate: data[data.length - 1].Date,
+        lastSimilarDate: findLastSimilarDate(data, updatedStats?.todayMax, updatedStats?.todayMin)
+    };
+}
+
+export function findLastSimilarDate(data: WeatherRecord[], todayMax?: number, todayMin?: number): Date | undefined {
+    if (todayMax === undefined || todayMin === undefined) return undefined;
+    const todayMean = (todayMax + todayMin) / 2;
+    // If today is colder than median (approx 50F), look for <=, else >=
+    const isCold = todayMean < 50;
+
+    // Search backwards skipping the very last record if it matches today (to find the *previous* time)
+    // Assuming data is sorted by date.
+    // If date is today, skip it.
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    for (let i = data.length - 1; i >= 0; i--) {
+        const d = data[i];
+        if (d.Date.toISOString().split('T')[0] === todayStr) continue;
+
+        if (isCold) {
+            if (d['Avg Temp (°F)'] <= todayMean) return d.Date;
+        } else {
+            if (d['Avg Temp (°F)'] >= todayMean) return d.Date;
+        }
+    }
+    return undefined;
+}
+
+function getDayOfYear(date: Date): number {
+    const start = new Date(date.getFullYear(), 0, 0);
+    const diff = (date.getTime() - start.getTime()) + ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000);
+    const oneDay = 1000 * 60 * 60 * 24;
+    return Math.floor(diff / oneDay);
+}
+
+export function calculatePercentile(data: WeatherRecord[], todayMax?: number, todayMin?: number): number | undefined {
+    if (todayMax === undefined || todayMin === undefined) return undefined;
+
+    const todayMean = (todayMax + todayMin) / 2;
+    const todayDOY = getDayOfYear(new Date());
+
+    // Filter for all historical records matching today's DOY
+    const historical = data.filter(d => d.DayOfYear === todayDOY);
+    if (historical.length === 0) return undefined;
+
+    // Count how many years were colder than today
+    const colderYears = historical.filter(d => d['Avg Temp (°F)'] < todayMean).length;
+
+    return (colderYears / historical.length) * 100;
+}
+
 
 export function calculateZScore(value: number, history: number[]): number {
     if (history.length < 2) return 0;

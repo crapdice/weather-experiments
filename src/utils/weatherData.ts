@@ -1,6 +1,15 @@
 import * as d3 from 'd3';
-import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear } from './statisticalEngine';
-import { calculateSeasonalRank, SeasonalRank } from './seasonalEngine';
+import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear, calculateStats, findLastSimilarDate, calculatePercentile } from './statisticalEngine';
+import { calculateSeasonalRank } from './seasonalEngine';
+import { processAndEnrich, getMoonPhase, getDayOfYear, getSunTimes } from './dataProcessor';
+
+export interface SeasonalRank {
+    rank: number;
+    totalYears: number;
+    value: number;
+    percentile: number;
+    seasonName: string;
+}
 
 export interface WeatherRecord {
     Date: Date;
@@ -46,7 +55,7 @@ export interface ClimateStats {
     todaySnow?: number;
     currentWind?: number;
     currentGust?: number;
-    todayPercentile?: number; // 0-100 rank of today's mean temp vs history
+    todayPercentile?: number;
     lastSimilarDate?: Date;
     zScore?: number;
     currentStreak?: { count: number, startDate: Date, type: string };
@@ -55,102 +64,28 @@ export interface ClimateStats {
     seasonalSnow?: SeasonalRank;
 }
 
-export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats: ClimateStats } {
-    const data: WeatherRecord[] = rawData.map((d: any) => {
-        const date = new Date(d.Date);
-        return {
-            Date: date,
-            'Max Temp (°F)': +d['Max Temp (°F)'],
-            'Min Temp (°F)': +d['Min Temp (°F)'],
-            'Avg Temp (°F)': +d['Avg Temp (°F)'],
-            'Precipitation (in)': +d['Precipitation (in)'] || 0,
-            'Snowfall (in)': +d['Snowfall (in)'] || 0,
-            'Max Wind Speed (mph)': +d['Max Wind Speed (mph)'] || 0,
-            'Max Wind Gust (mph)': +d['Max Wind Gust (mph)'] || 0,
-            DayOfYear: getDayOfYear(date),
-            Year: date.getFullYear(),
-            MoonPhase: getMoonPhase(date),
-            Rain: +d['Precipitation (in)'] || 0,
-            Snow: +d['Snowfall (in)'] || 0,
-            ...getSunTimes(date),
-        };
-    }).filter(d => !isNaN(d.Date.getTime()));
-
-    // Sort by date
-    data.sort((a, b) => a.Date.getTime() - b.Date.getTime());
-
-    // --- Calculate Climatology (50-year seasonal normals) ---
-    const climatologyMap = new Map<number, { high: number, low: number }>();
-    const doyGroups = d3.group(data, d => d.DayOfYear);
-
-    doyGroups.forEach((records, doy) => {
-        climatologyMap.set(doy, {
-            high: d3.mean(records, r => r['Max Temp (°F)']) || 0,
-            low: d3.mean(records, r => r['Min Temp (°F)']) || 0
-        });
-    });
-
-    // --- Enrich with Analytics ---
-    for (let i = 0; i < data.length; i++) {
-        const d = data[i];
-
-        // SMA 7
-        if (i >= 6) {
-            const slice = data.slice(i - 6, i + 1);
-            d.SMA7 = d3.mean(slice, r => r['Avg Temp (°F)']);
-        }
-
-        // ROC 1y
-        if (i >= 365) {
-            d.ROC1y = d['Avg Temp (°F)'] - data[i - 365]['Avg Temp (°F)'];
-        }
-
-        // Climatology
-        const normals = climatologyMap.get(d.DayOfYear);
-        if (normals) {
-            d.MeanHigh = normals.high;
-            d.MeanLow = normals.low;
-        }
-
-        // HDD (Base 65°F) - Energy demand for heating
-        d.HDD = Math.max(0, 65 - d['Avg Temp (°F)']);
-        // GDD (Base 50°F) - Crop heat accumulation
-        d.GDD = Math.max(0, d['Avg Temp (°F)'] - 50);
-    }
-
-    let stats = calculateStats(data);
-    return { data, stats };
-}
-
 async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number, recentHistory: WeatherRecord[] } | undefined> {
     try {
         const res = await fetch('/api/weather?type=current');
         if (res.ok) {
             const json = await res.json();
             if (json.current && json.current.temperature_2m !== undefined) {
-                // Parse Daily History (from 'daily' object which matches API structure)
                 const history: WeatherRecord[] = [];
                 if (json.daily && json.daily.time) {
                     for (let i = 0; i < json.daily.time.length; i++) {
-                        // Skip "Today" in history if we want, but better to just include everything and let merge handle it.
-                        // Actually, forecast_days=1 means only today? No we added past_days=14.
                         const d = new Date(json.daily.time[i] + 'T12:00:00');
-                        // Don't include "Today" (future) if it's incomplete? 
-                        // But we want today's accumulation so far.
-                        // Let's include all.
-
                         history.push({
                             Date: d,
-                            'Max Temp (°F)': json.daily.temperature_2m_max?.[i],
-                            'Min Temp (°F)': json.daily.temperature_2m_min?.[i],
-                            'Avg Temp (°F)': json.daily.temperature_2m_mean?.[i],
-                            'Precipitation (in)': json.daily.precipitation_sum?.[i], // API is inch now
-                            'Snowfall (in)': json.daily.snowfall_sum?.[i], // API is inch
+                            'Max Temp (°F)': json.daily.temperature_2m_max?.[i] ?? 0,
+                            'Min Temp (°F)': json.daily.temperature_2m_min?.[i] ?? 0,
+                            'Avg Temp (°F)': json.daily.temperature_2m_mean?.[i] ?? 0,
+                            'Precipitation (in)': (json.daily.precipitation_sum?.[i] || json.daily.rain_sum?.[i] || 0),
+                            'Snowfall (in)': json.daily.snowfall_sum?.[i] || 0,
                             'Max Wind Speed (mph)': (json.daily.wind_speed_10m_max?.[i] || 0) * 0.621371,
                             'Max Wind Gust (mph)': (json.daily.wind_gusts_10m_max?.[i] || 0) * 0.621371,
                             DayOfYear: 0,
                             Year: d.getFullYear()
-                        });
+                        } as WeatherRecord);
                     }
                 }
 
@@ -160,137 +95,41 @@ async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, wi
                     wind: (json.current.wind_speed_10m || 0) * 0.621371,
                     gust: (json.current.wind_gusts_10m || 0) * 0.621371,
                     time: new Date(json.current.time),
-                    // With past_days=14, index 0 is 14 days ago!
-                    // We need the LAST index for "Today".
-                    todayMax: json.daily.temperature_2m_max[json.daily.time.length - 1],
-                    todayMin: json.daily.temperature_2m_min[json.daily.time.length - 1],
-                    todayRain: json.daily.rain_sum?.[json.daily.time.length - 1] || 0,
+                    todayMax: json.daily.temperature_2m_max?.[json.daily.time.length - 1] ?? json.current.temperature_2m,
+                    todayMin: json.daily.temperature_2m_min?.[json.daily.time.length - 1] ?? json.current.temperature_2m,
+                    todayRain: (json.daily.precipitation_sum?.[json.daily.time.length - 1] || json.daily.rain_sum?.[json.daily.time.length - 1] || 0),
                     todaySnow: json.daily.snowfall_sum?.[json.daily.time.length - 1] || 0,
-
                     recentHistory: history
                 };
             }
         }
     } catch (e) {
-        // Internal errors are logged but not exposed with full external URLs
         console.error("Weather service sync failed", e);
     }
     return undefined;
 }
 
-function calculateStats(data: WeatherRecord[], updatedStats?: ClimateStats): ClimateStats {
-    const last30 = data.slice(-30);
-    const avgTempAll = d3.mean(data, d => d['Avg Temp (°F)']) || 0;
-    const recentAvg = d3.mean(last30, d => d['Avg Temp (°F)']) || 0;
-
-    const maxRec = data.reduce((prev, curr) => prev['Max Temp (°F)'] > curr['Max Temp (°F)'] ? prev : curr);
-    const minRec = data.reduce((prev, curr) => prev['Min Temp (°F)'] < curr['Min Temp (°F)'] ? prev : curr);
-
-    const frostDays = data.filter(d => d['Min Temp (°F)'] < 0).length;
-    const heatDays = data.filter(d => d['Max Temp (°F)'] > 95).length;
-
-    const diffs = [];
-    for (let i = 1; i < data.length; i++) {
-        diffs.push(Math.abs(data[i]['Avg Temp (°F)'] - data[i - 1]['Avg Temp (°F)']));
-    }
-    const volatility = d3.mean(diffs) || 0;
-
-    const firstDecade = data.filter(d => d.Year <= data[0].Year + 10);
-    const lastDecade = data.filter(d => d.Year >= data[data.length - 1].Year - 10);
-    const decadalDelta = (d3.mean(lastDecade, d => d['Avg Temp (°F)']) || 0) - (d3.mean(firstDecade, d => d['Avg Temp (°F)']) || 0);
-
-    return {
-        maxTemp: maxRec['Max Temp (°F)'],
-        maxTempDate: maxRec.Date,
-        minTemp: minRec['Min Temp (°F)'],
-        minTempDate: minRec.Date,
-        pulseDelta: recentAvg - avgTempAll,
-        frostDays,
-        heatDays,
-        volatility,
-        decadalDelta,
-        lastUpdate: data[data.length - 1].Date,
-        lastSimilarDate: findLastSimilarDate(data, updatedStats?.todayMax, updatedStats?.todayMin)
-    };
-}
-
-function findLastSimilarDate(data: WeatherRecord[], todayMax?: number, todayMin?: number): Date | undefined {
-    if (todayMax === undefined || todayMin === undefined) return undefined;
-    const todayMean = (todayMax + todayMin) / 2;
-    // If today is colder than median (approx 50F), look for <=, else >=
-    const isCold = todayMean < 50;
-
-    // Search backwards skipping the very last record if it matches today (to find the *previous* time)
-    // Assuming data is sorted by date.
-    // If date is today, skip it.
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    for (let i = data.length - 1; i >= 0; i--) {
-        const d = data[i];
-        if (d.Date.toISOString().split('T')[0] === todayStr) continue;
-
-        if (isCold) {
-            if (d['Avg Temp (°F)'] <= todayMean) return d.Date;
-        } else {
-            if (d['Avg Temp (°F)'] >= todayMean) return d.Date;
-        }
-    }
-    return undefined;
-}
-
-function calculatePercentile(data: WeatherRecord[], todayMax?: number, todayMin?: number): number | undefined {
-    if (todayMax === undefined || todayMin === undefined) return undefined;
-
-    const todayMean = (todayMax + todayMin) / 2;
-    const todayDOY = getDayOfYear(new Date());
-
-    // Filter for all historical records matching today's DOY
-    const historical = data.filter(d => d.DayOfYear === todayDOY);
-    if (historical.length === 0) return undefined;
-
-    // Count how many years were colder than today
-    const colderYears = historical.filter(d => d['Avg Temp (°F)'] < todayMean).length;
-
-    return (colderYears / historical.length) * 100;
-}
-
 export async function loadWeatherData(url: string): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
-    // Point to the new enriched dataset by default
     const targetUrl = url.includes('chicago_weather_50years.csv') || url.includes('chicago_weather_enriched.csv')
         ? '/data/chicago_weather_v86.csv'
         : url;
 
-    // 1. Load CSV (Base Layer)
     const rawDataCSV = await d3.csv(targetUrl);
-
-    // 2. Fetch Current + Recent History (Patch Layer)
     const currentInfo = await fetchCurrentWeather();
 
     let mergedRawData: any[] = rawDataCSV;
 
     if (currentInfo && currentInfo.recentHistory) {
-        // Convert CSV rows to a Map for easy upsert by Date String
-        // CSV dates are "YYYY-MM-DD" usually.
         const dataMap = new Map();
         rawDataCSV.forEach(d => {
-            // Normalized date key
             const key = new Date(d.Date).toISOString().split('T')[0];
             dataMap.set(key, d);
         });
 
-        // Upsert API History
         currentInfo.recentHistory.forEach(rec => {
             const key = rec.Date.toISOString().split('T')[0];
-            // Convert to CSV-like structure for the enricher
-            // enricher expects string keys usually, but let's check processAndEnrich. 
-            // It expects "Avg Temp (°F)" etc.
             const csvRow = {
-                Date: key, // Keep as string for now, enricher parses it? 
-                // processAndEnrich does: d.Date = new Date(d.Date)
-                // But wait, the API record is already typed WeatherRecord partially?
-                // Let's manually map it to the raw format if needed, or just insert it as a Record
-                // Actually processAndEnrich iterates struct.
-                // Let's make sure we match the shape processAndEnrich expects.
+                Date: key,
                 'Max Temp (°F)': rec['Max Temp (°F)'],
                 'Min Temp (°F)': rec['Min Temp (°F)'],
                 'Avg Temp (°F)': rec['Avg Temp (°F)'],
@@ -298,26 +137,47 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
                 'Snowfall (in)': rec['Snowfall (in)'],
                 'Max Wind Speed (mph)': rec['Max Wind Speed (mph)'],
                 'Max Wind Gust (mph)': rec['Max Wind Gust (mph)'],
-                DayOfYear: 0, // calc in enrich
-                Year: 0 // calc in enrich
+                DayOfYear: 0,
+                Year: 0
             };
-            // We overwrite strict duplicates from CSV with fresh API data
             dataMap.set(key, csvRow);
         });
 
-        // Convert back to array and sort
         mergedRawData = Array.from(dataMap.values()).sort((a, b) => new Date(a.Date).getTime() - new Date(b.Date).getTime());
     }
 
-    const result = processAndEnrich(mergedRawData);
-    const data = result.data; // Alias for easier access
+    const { data, stats } = processAndEnrich(mergedRawData);
+    return finalizeResults(data, stats, currentInfo);
+}
 
+function finalizeResults(data: WeatherRecord[], stats: ClimateStats, currentInfo?: { temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number }) {
     if (currentInfo) {
-        // Statistical Engine Integrations
-        hydrateRealtimeStats(result.stats, result.data, currentInfo);
-    }
+        // Ensure today (from observation) exists in data
+        const todayStr = currentInfo.time.toISOString().split('T')[0];
+        const hasToday = data.some(d => d.Date.toISOString().split('T')[0] === todayStr);
 
-    return result;
+        if (!hasToday) {
+            const todayRec: WeatherRecord = {
+                Date: new Date(todayStr + 'T12:00:00Z'),
+                'Max Temp (°F)': currentInfo.todayMax,
+                'Min Temp (°F)': currentInfo.todayMin,
+                'Avg Temp (°F)': currentInfo.temp,
+                'Precipitation (in)': currentInfo.todayRain,
+                'Snowfall (in)': currentInfo.todaySnow,
+                'Max Wind Speed (mph)': currentInfo.wind,
+                'Max Wind Gust (mph)': currentInfo.gust,
+                DayOfYear: getDayOfYear(new Date()),
+                Year: new Date().getFullYear()
+            };
+            data.push(todayRec);
+            data.sort((a, b) => a.Date.getTime() - b.Date.getTime());
+            // Recalculate stats since we added a record
+            Object.assign(stats, calculateStats(data));
+        }
+
+        hydrateRealtimeStats(stats, data, currentInfo);
+    }
+    return { data, stats };
 }
 
 function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], currentInfo: { temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number, recentHistory?: WeatherRecord[] }) {
@@ -334,19 +194,12 @@ function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], curren
     const doy = getDayOfYear(new Date());
     const historyForDay = data.filter(d => d.DayOfYear === doy).map(d => d['Avg Temp (°F)']);
 
-    // 1. Sigma Score
     stats.zScore = calculateZScore(currentInfo.temp, historyForDay);
-
-    // 2. Percentile
     stats.todayPercentile = calculatePercentileRank(currentInfo.temp, historyForDay);
 
-    // 3. Analog Year
     const recentHistory = data.slice(-30);
-    const analog = findAnalogYear(recentHistory, data);
-    stats.analogYear = analog;
+    stats.analogYear = findAnalogYear(recentHistory, data);
 
-    // 4. Streak
-    // "Consecutive days fitting the current mode (Freezing or Thawing)"
     const isFreezing = currentInfo.temp < 32;
     const streakFreezing = findLongestRecentStreak(data, d => isFreezing ? d['Avg Temp (°F)'] < 32 : d['Avg Temp (°F)'] >= 32);
 
@@ -356,34 +209,21 @@ function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], curren
         type: isFreezing ? 'Below Freezing' : 'Above Freezing'
     };
 
-    // 5. Seasonal Rank
-    // Define "Season so far" from most recent record's season start
-    // Winter: Dec 1. Spring: Mar 1. Summer: Jun 1. Fall: Sept 1.
-    const lastDate = currentInfo.time;
-    const month = lastDate.getMonth();
-    let seasonStartMonth = 11; // Winter default
+    stats.seasonalSnow = calculateSeasonalRank(data.filter(d => d.Date >= getSeasonStartDate(currentInfo.time)), data, 'snow');
+    stats.seasonalRain = calculateSeasonalRank(data.filter(d => d.Date >= getSeasonStartDate(currentInfo.time)), data, 'rain');
+    stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
+}
+
+function getSeasonStartDate(date: Date): Date {
+    const month = date.getMonth();
+    let seasonStartMonth = 11;
     if (month >= 2 && month <= 4) seasonStartMonth = 2; // Spring
     if (month >= 5 && month <= 7) seasonStartMonth = 5; // Summer
     if (month >= 8 && month <= 10) seasonStartMonth = 8; // Fall
 
-    let startYear = lastDate.getFullYear();
-    if (month < seasonStartMonth) startYear--; // Handle Jan/Feb belonging to previous Dec's winter start
-    if (month === 11 && seasonStartMonth === 11) startYear = lastDate.getFullYear(); // Dec 1 starts in current year
-
-    const seasonStartDate = new Date(startYear, seasonStartMonth, 1);
-
-    // Filter "Current Season" records from the main dataset
-    const currentSeasonData = data.filter(d => d.Date >= seasonStartDate);
-
-    // We need to add the "Simulated" today record if it's not in 'data' yet (often it isn't if refreshing)
-    // But 'hydrate' modifies stats, doesn't add rows.
-    // We will pass filtered data to engine.
-
-    stats.seasonalSnow = calculateSeasonalRank(currentSeasonData, data, 'snow');
-    stats.seasonalRain = calculateSeasonalRank(currentSeasonData, data, 'rain');
-
-    // Restore last similar date logic if we want it
-    stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
+    let startYear = date.getFullYear();
+    if (month < seasonStartMonth) startYear--;
+    return new Date(startYear, seasonStartMonth, 1);
 }
 
 export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
@@ -393,33 +233,32 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
         if (!response.ok) throw new Error(`Weather API error`);
 
         const apiData = await response.json();
-
         if (!apiData.daily || !apiData.daily.time) {
-            return ensureTodayRecord(currentData, currentInfo);
+            const stats = calculateStats(currentData);
+            return finalizeResults(currentData, stats, currentInfo);
         }
 
         const newRecordsRaw = apiData.daily.time.map((time: string, i: number) => ({
             Date: time,
-            'Max Temp (°F)': apiData.daily.temperature_2m_max[i],
-            'Min Temp (°F)': apiData.daily.temperature_2m_min[i],
-            'Avg Temp (°F)': apiData.daily.temperature_2m_mean[i],
-            'Precipitation (in)': apiData.daily.precipitation_sum[i],
-            'Snowfall (in)': apiData.daily.snowfall_sum[i],
-            'Max Wind Speed (mph)': apiData.daily.wind_speed_10m_max[i],
-            'Max Wind Gust (mph)': apiData.daily.wind_gusts_10m_max[i],
+            'Max Temp (°F)': apiData.daily.temperature_2m_max?.[i] ?? 0,
+            'Min Temp (°F)': apiData.daily.temperature_2m_min?.[i] ?? 0,
+            'Avg Temp (°F)': apiData.daily.temperature_2m_mean?.[i] ?? 0,
+            'Precipitation (in)': (apiData.daily.precipitation_sum?.[i] || apiData.daily.rain_sum?.[i] || 0),
+            'Snowfall (in)': apiData.daily.snowfall_sum?.[i] || 0,
+            'Max Wind Speed (mph)': apiData.daily.wind_speed_10m_max?.[i] || 0,
+            'Max Wind Gust (mph)': apiData.daily.wind_gusts_10m_max?.[i] || 0,
         })).filter((r: any) => r['Avg Temp (°F)'] !== null && r['Max Temp (°F)'] !== null);
 
-        // Deduplicate
         const existingDates = new Set(currentData.map(d => d.Date.toISOString().split('T')[0]));
         const uniqueNew = newRecordsRaw.filter((r: any) => !existingDates.has(r.Date));
 
         if (uniqueNew.length === 0) {
-            return ensureTodayRecord(currentData, currentInfo);
-        };
+            const stats = calculateStats(currentData);
+            return finalizeResults(currentData, stats, currentInfo);
+        }
 
-        // Convert existing records back to raw format for re-processing
         const rawCurrent = currentData.map(d => ({
-            Date: d.Date.toISOString().split('T')[0],
+            Date: formatDateKey(d.Date),
             'Max Temp (°F)': d['Max Temp (°F)'],
             'Min Temp (°F)': d['Min Temp (°F)'],
             'Avg Temp (°F)': d['Avg Temp (°F)'],
@@ -429,80 +268,17 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
             'Max Wind Gust (mph)': d['Max Wind Gust (mph)'],
         }));
 
-        const { data: finalData } = processAndEnrich([...rawCurrent, ...uniqueNew]);
-        return ensureTodayRecord(finalData, currentInfo);
+        const { data: finalData, stats: finalStats } = processAndEnrich([...rawCurrent, ...uniqueNew]);
+        return finalizeResults(finalData, finalStats, currentInfo);
     } catch (e) {
         console.error("Refresh failed:", e);
-        return ensureTodayRecord(currentData, currentInfo);
+        const stats = calculateStats(currentData);
+        return finalizeResults(currentData, stats, currentInfo);
     }
 }
-
-function ensureTodayRecord(data: WeatherRecord[], currentInfo?: { temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number }): { data: WeatherRecord[], stats: ClimateStats } {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const hasToday = data.some(d => d.Date.toISOString().split('T')[0] === todayStr);
-
-    if (!hasToday && currentInfo) {
-        const todayRecord: WeatherRecord = {
-            Date: new Date(todayStr + 'T12:00:00'), // Noon today
-            'Max Temp (°F)': currentInfo.temp,
-            'Min Temp (°F)': currentInfo.temp,
-            'Avg Temp (°F)': currentInfo.temp,
-            DayOfYear: getDayOfYear(new Date()),
-            Year: new Date().getFullYear(),
-            'Precipitation (in)': 0,
-            'Snowfall (in)': 0,
-            'Max Wind Speed (mph)': 0,
-            'Max Wind Gust (mph)': 0,
-        };
-        const newData = [...data, todayRecord];
-        // Re-enrich to get SMA7 etc
-        const result = processAndEnrich(newData.map(d => ({
-            Date: formatDateKey(d.Date),
-            'Max Temp (°F)': d['Max Temp (°F)'],
-            'Min Temp (°F)': d['Min Temp (°F)'],
-            'Avg Temp (°F)': d['Avg Temp (°F)'],
-            'Precipitation (in)': d['Precipitation (in)'],
-            'Snowfall (in)': d['Snowfall (in)'],
-            'Max Wind Speed (mph)': d['Max Wind Speed (mph)'],
-            'Max Wind Gust (mph)': d['Max Wind Gust (mph)'],
-        })));
-
-        hydrateRealtimeStats(result.stats, result.data, currentInfo);
-        return result;
-    }
-
-    const stats = calculateStats(data);
-    if (currentInfo) {
-        hydrateRealtimeStats(stats, data, currentInfo);
-    }
-    return { data, stats };
-}
-
-import SunCalc from 'suncalc';
-
-function getMoonPhase(date: Date): number {
-    return SunCalc.getMoonIllumination(date).phase;
-}
-
-function getDayOfYear(date: Date): number {
-    const start = new Date(date.getFullYear(), 0, 0);
-    const diff = (date.getTime() - start.getTime()) + ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000);
-    const oneDay = 1000 * 60 * 60 * 24;
-    return Math.floor(diff / oneDay);
-}
-
-function getSunTimes(date: Date): { Sunrise: Date, Sunset: Date } {
-    const times = SunCalc.getTimes(date, 41.9742, -87.9073);
-    return {
-        Sunrise: times.sunrise,
-        Sunset: times.sunset
-    };
-}
-
 
 export function formatDateKey(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+    return date.toISOString().split('T')[0];
 }
+
+export { getDayOfYear, getMoonPhase, getSunTimes };
