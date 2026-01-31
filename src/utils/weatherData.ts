@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear, calculateStats, findLastSimilarDate, calculatePercentile } from './statisticalEngine';
+import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear, calculateStats, findLastSimilarDate } from './statisticalEngine';
 import { calculateSeasonalRank } from './seasonalEngine';
 import { processAndEnrich, getMoonPhase, getDayOfYear, getSunTimes } from './dataProcessor';
 
@@ -117,7 +117,7 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
     const rawDataCSV = await d3.csv(targetUrl);
     const currentInfo = await fetchCurrentWeather();
 
-    let mergedRawData: any[] = rawDataCSV;
+    let mergedRawData: Record<string, string | number | null | undefined>[] = rawDataCSV;
 
     if (currentInfo && currentInfo.recentHistory) {
         const dataMap = new Map();
@@ -239,7 +239,7 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
         }
 
         const newRecordsRaw = apiData.daily.time.map((time: string, i: number) => ({
-            Date: time,
+            Date: new Date(time + 'T12:00:00Z'),
             'Max Temp (°F)': apiData.daily.temperature_2m_max?.[i] ?? 0,
             'Min Temp (°F)': apiData.daily.temperature_2m_min?.[i] ?? 0,
             'Avg Temp (°F)': apiData.daily.temperature_2m_mean?.[i] ?? 0,
@@ -247,10 +247,10 @@ export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<
             'Snowfall (in)': apiData.daily.snowfall_sum?.[i] || 0,
             'Max Wind Speed (mph)': apiData.daily.wind_speed_10m_max?.[i] || 0,
             'Max Wind Gust (mph)': apiData.daily.wind_gusts_10m_max?.[i] || 0,
-        })).filter((r: any) => r['Avg Temp (°F)'] !== null && r['Max Temp (°F)'] !== null);
+        })).filter((r: WeatherRecord) => r['Avg Temp (°F)'] !== null && r['Max Temp (°F)'] !== null);
 
         const existingDates = new Set(currentData.map(d => d.Date.toISOString().split('T')[0]));
-        const uniqueNew = newRecordsRaw.filter((r: any) => !existingDates.has(r.Date));
+        const uniqueNew = newRecordsRaw.filter((r: WeatherRecord) => !existingDates.has(r.Date.toISOString().split('T')[0]));
 
         if (uniqueNew.length === 0) {
             const stats = calculateStats(currentData);

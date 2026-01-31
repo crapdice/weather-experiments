@@ -10,7 +10,13 @@ interface Props {
 
 export function ClimateStripes({ data }: Props) {
     const svgRef = useRef<SVGSVGElement>(null);
-    const [range, setRange] = useState<[Date, Date] | null>(null);
+    const [range, setRange] = useState<[Date, Date] | null>(() => {
+        if (data.length) {
+            // Group by month to find monthly bounds similar to monthlyData
+            return [new Date(data[0].Year, data[0].Date.getMonth(), 1), new Date(data[data.length - 1].Year, data[data.length - 1].Date.getMonth(), 1)];
+        }
+        return null;
+    });
     const [widthState, setWidthState] = useState(0);
 
     useEffect(() => {
@@ -42,11 +48,7 @@ export function ClimateStripes({ data }: Props) {
         })).sort((a, b) => a.date.getTime() - b.date.getTime());
     }, [data]);
 
-    useEffect(() => {
-        if (monthlyData.length && !range) {
-            setRange([monthlyData[0].date, monthlyData[monthlyData.length - 1].date]);
-        }
-    }, [monthlyData, range]);
+    // Initial range is handled by useState initializer.
 
     const filteredStripes = useMemo(() => {
         if (!range) return monthlyData;
@@ -107,8 +109,6 @@ export function ClimateStripes({ data }: Props) {
         const legendHeight = 10;
         const gLegend = g.append("g")
             .attr("transform", `translate(${width - legendWidth}, -35)`);
-
-        const legendScale = d3.scaleLinear().domain([-4, 4]).range([0, legendWidth]);
 
         const defs = svg.append("defs");
         const gradient = defs.append("linearGradient")
@@ -231,7 +231,7 @@ export function ClimateStripes({ data }: Props) {
             .call(brush);
 
         // Custom handles
-        const handlePath = (d: any) => {
+        const handlePath = () => {
             const h = sliderHeight;
             const w = 6;
             const x = 0;
@@ -267,7 +267,7 @@ export function ClimateStripes({ data }: Props) {
         return () => {
             tooltip.remove();
         };
-    }, [filteredStripes, range, widthState]);
+    }, [filteredStripes, monthlyData, range, widthState]);
 
     return (
         <div className="stripes-container">

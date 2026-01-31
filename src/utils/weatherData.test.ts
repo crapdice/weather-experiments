@@ -47,7 +47,7 @@ describe('weatherData integration', () => {
             }
         };
 
-        (global.fetch as any).mockImplementation((url: string) => {
+        vi.mocked(global.fetch).mockImplementation((url: string) => {
             if (url.includes('type=current')) {
                 return Promise.resolve({
                     ok: true,

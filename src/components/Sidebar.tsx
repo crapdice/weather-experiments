@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import { Activity, ArrowLeftRight, FlaskConical, LayoutDashboard, RefreshCw } from 'lucide-react';
+import { Activity, ArrowLeftRight, FlaskConical, RefreshCw } from 'lucide-react';
 
 interface SidebarProps {
   currentView: string;

@@ -264,7 +264,7 @@ class UniversalFeedbackWidget extends HTMLElement {
             }, 3000);
           }
         } catch (err) {
-          console.error("Transmission error");
+          console.error("Transmission error", err);
         }
       }
     });

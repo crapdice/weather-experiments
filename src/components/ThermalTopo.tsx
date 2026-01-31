@@ -35,7 +35,7 @@ export function ThermalTopo({ data }: Props) {
   useEffect(() => {
     if (!grid || !containerRef.current || !canvasRef.current) return;
 
-    const { matrix, years, doys } = grid;
+    const { matrix, years } = grid;
     const isMobile = window.innerWidth <= 768;
     const width = containerRef.current.clientWidth;
     const height = isMobile ? 400 : 650;
@@ -109,7 +109,7 @@ export function ThermalTopo({ data }: Props) {
     const axesHelper = new THREE.AxesHelper(70);
     scene.add(axesHelper);
 
-    const makeTextSprite = (message: string, parameters: any = {}) => {
+    const makeTextSprite = (message: string, parameters: { fontface?: string, fontsize?: number, color?: string } = {}) => {
       const fontface = parameters.fontface || "Arial";
       const fontsize = parameters.fontsize || 48;
       const canvas = document.createElement('canvas');

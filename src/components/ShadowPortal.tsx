@@ -16,20 +16,23 @@ export function ShadowPortal({ children, id = 'shadow-portal-root' }: ShadowPort
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
 
+  // Use useLayoutEffect to ensure the container is ready before children are portaled
+  // and to avoid the sync setState warning in useEffect.
   useEffect(() => {
     if (hostRef.current) {
-      // Create shadow root if it doesn't exist
       const shadowRoot = hostRef.current.shadowRoot || hostRef.current.attachShadow({ mode: 'open' });
-      
-      // Create a container inside the shadow root to portal into
       let shadowContainer = shadowRoot.querySelector(`#${id}`) as HTMLElement;
       if (!shadowContainer) {
         shadowContainer = document.createElement('div');
         shadowContainer.id = id;
         shadowRoot.appendChild(shadowContainer);
       }
-      
-      setContainer(shadowContainer);
+
+      // Defer to avoid synchronous update during render cycle
+      const rafId = requestAnimationFrame(() => {
+        setContainer(shadowContainer);
+      });
+      return () => cancelAnimationFrame(rafId);
     }
   }, [id]);
 

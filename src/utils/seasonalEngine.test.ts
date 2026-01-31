@@ -16,7 +16,7 @@ const createRec = (date: string, snow: number): WeatherRecord => {
         'Max Wind Gust (mph)': 20,
         DayOfYear: d.getDate(), // Simplified for this test context if needed, but Date object is primary
         Year: d.getFullYear()
-    } as any; // Cast to avoid full mock
+    } as WeatherRecord; // Cast to avoid full mock
 };
 
 describe('Seasonal Engine', () => {

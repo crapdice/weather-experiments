@@ -57,14 +57,14 @@ export function SunriseChart({ data }: SunriseChartProps) {
 
         const morningArea = d3.area<PlotItem>()
             .x(d => xScale(d.doy))
-            .y0(d => yScale(0))
+            .y0(() => yScale(0))
             .y1(d => yScale(d.sunriseHour))
             .curve(d3.curveMonotoneX);
 
         const eveningArea = d3.area<PlotItem>()
             .x(d => xScale(d.doy))
             .y0(d => yScale(d.sunsetHour))
-            .y1(d => yScale(24))
+            .y1(() => yScale(24))
             .curve(d3.curveMonotoneX);
 
         // Draw Areas

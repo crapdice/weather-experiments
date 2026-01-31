@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear } from './statisticalEngine';
 import { WeatherRecord } from './weatherData';
 

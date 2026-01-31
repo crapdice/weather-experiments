@@ -27,7 +27,7 @@ export function FeedbackForm() {
           }, 3000);
         }
       } catch (err) {
-        console.error("Communication failure");
+        console.error("Communication failure", err);
       }
     }
   };

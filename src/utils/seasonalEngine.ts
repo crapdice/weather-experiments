@@ -24,7 +24,7 @@ function getSeasonName(d: Date): string {
 export function calculateSeasonalRank(currentSeason: WeatherRecord[], history: WeatherRecord[], metric: 'snow' | 'rain'): SeasonalRank {
     if (currentSeason.length === 0) return { rank: 0, totalYears: 0, value: 0, percentile: 0, seasonName: 'Unknown' };
 
-    const firstDate = currentSeason[0].Date;
+    // const firstDate = currentSeason[0].Date; (removed unused)
     const lastDate = currentSeason[currentSeason.length - 1].Date;
     const targetSeasonName = getSeasonName(lastDate);
     const targetSeasonYear = getSeasonYear(lastDate);
@@ -43,8 +43,6 @@ export function calculateSeasonalRank(currentSeason: WeatherRecord[], history: W
     // Easier: Define a "Days Into Season" index?
     // Dec 1 = Day 0. Jan 1 = Day 31.
     // Let's use simple Month/Day matching.
-
-    const seasonStartMonth = targetSeasonName === 'Winter' ? 11 : targetSeasonName === 'Spring' ? 2 : targetSeasonName === 'Summer' ? 5 : 8;
 
     // Filter history to just records matching the season type
     const historyInSeason = history.filter(d => getSeasonName(d.Date) === targetSeasonName);

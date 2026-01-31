@@ -12,7 +12,13 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setThemeState] = useState<Theme>('cyber-ice');
+    const [theme, setThemeState] = useState<Theme>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('weather-app-theme') as Theme;
+            return saved || 'cyber-ice';
+        }
+        return 'cyber-ice';
+    });
 
     const setTheme = (newTheme: Theme) => {
         setThemeState(newTheme);
@@ -21,13 +27,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('weather-app-theme') as Theme;
-        if (savedTheme) {
-            setThemeState(savedTheme);
-        }
-    }, []);
-
+    // Subsequent updates to the DOM based on theme state
     useEffect(() => {
         const doc = document.documentElement;
         // Remove all theme classes first

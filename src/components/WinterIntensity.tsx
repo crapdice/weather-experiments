@@ -11,7 +11,6 @@ interface Props {
 export function WinterIntensity({ data }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
-    const [dateRange, setDateRange] = useState<[Date, Date] | null>(null);
     const [widthState, setWidthState] = useState(0);
 
     useEffect(() => {
@@ -31,15 +30,17 @@ export function WinterIntensity({ data }: Props) {
         });
     }, [data]);
 
-    // Initialize date range to last 5 winters
-    useEffect(() => {
-        if (winterData.length && !dateRange) {
+    const [dateRange, setDateRange] = useState<[Date, Date] | null>(() => {
+        if (winterData.length) {
             const end = winterData[winterData.length - 1].Date;
             const start = new Date(end);
             start.setFullYear(start.getFullYear() - 5);
-            setDateRange([start < winterData[0].Date ? winterData[0].Date : start, end]);
+            return [start < winterData[0].Date ? winterData[0].Date : start, end];
         }
-    }, [winterData]);
+        return null;
+    });
+
+    // Initial date range handled by useState initializer.
 
     useEffect(() => {
         if (!winterData.length || !svgRef.current || !containerRef.current || !dateRange) return;
@@ -175,7 +176,7 @@ export function WinterIntensity({ data }: Props) {
             .attr("d", d3.line<WeatherRecord>().x(d => brushXScale(d.Date)).y(d => brushYScale(d.Snow || 0)).curve(d3.curveLinear));
 
         gBrush.call(brush)
-            .call(brush.move as any, xFull.range() as any);
+            .call(brush.move as unknown as (selection: d3.Selection<SVGGElement, unknown, null, undefined>) => void, xFull.range() as [number, number]);
 
         // Labels
         g.append("text").attr("x", 0).attr("y", -10).text("❄️ Historical Snow Accumulation (Inches)").style("fill", "white").style("font-size", "0.75rem").style("font-weight", "bold");
@@ -195,7 +196,7 @@ export function WinterIntensity({ data }: Props) {
                         const end = winterData[winterData.length - 1].Date;
                         const start = new Date(end);
                         start.setFullYear(start.getFullYear() - 5);
-                        setDateRange([start, end]);
+                        setDateRange([start < winterData[0].Date ? winterData[0].Date : start, end]);
                     }
                 }}>Reset Range</button>
             </div>

@@ -22,9 +22,10 @@ export function getSunTimes(date: Date): { Sunrise: Date, Sunset: Date } {
     };
 }
 
-export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats: ClimateStats } {
-    const data: WeatherRecord[] = rawData.map((d: any) => {
-        const date = new Date(d.Date);
+export function processAndEnrich(rawData: Record<string, unknown>[]): { data: WeatherRecord[], stats: ClimateStats } {
+    const data: WeatherRecord[] = rawData.map((record) => {
+        const d = record as unknown as Record<string, string | number>;
+        const date = new Date(d.Date as string);
         return {
             Date: date,
             'Max Temp (°F)': +d['Max Temp (°F)'],
@@ -85,6 +86,6 @@ export function processAndEnrich(rawData: any[]): { data: WeatherRecord[], stats
         d.GDD = Math.max(0, d['Avg Temp (°F)'] - 50);
     }
 
-    let stats = calculateStats(data);
+    const stats = calculateStats(data);
     return { data, stats };
 }

@@ -124,7 +124,6 @@ export function findAnalogYear(recentData: WeatherRecord[], historicalData: Weat
 
     // Group history by year
     const historyByYear = d3.group(historicalData, d => d.Year);
-    const recentDoYs = recentData.map(d => d.DayOfYear);
 
     let bestYear = 0;
     let lowestError = Infinity;

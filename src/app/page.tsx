@@ -17,18 +17,11 @@ export default function Home() {
   );
 }
 
-// Exhaustive JSX declarations for React 19 / Next.js
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace JSX {
     interface IntrinsicElements {
-      'kord-feedback-widget': any;
-    }
-  }
-  namespace React {
-    namespace JSX {
-      interface IntrinsicElements {
-        'kord-feedback-widget': any;
-      }
+      'kord-feedback-widget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     }
   }
 }

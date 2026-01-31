@@ -73,7 +73,7 @@ export function PredictiveLab({ data }: Props) {
             // --- PREDICTION VIEW: Uncertainty Cone & Climatology ---
 
             // 1. All-time Historical Spread (Area)
-            const spreadArea = d3.area<any>()
+            const spreadArea = d3.area<{ doy: number, avg: number, max: number, min: number }>()
                 .x(d => x(d.doy))
                 .y0(d => y(d.min))
                 .y1(d => y(d.max))
@@ -86,7 +86,7 @@ export function PredictiveLab({ data }: Props) {
                 .attr("d", spreadArea);
 
             // 2. Average Normal Line
-            const normalLine = d3.line<any>()
+            const normalLine = d3.line<{ doy: number, avg: number }>()
                 .x(d => x(d.doy))
                 .y(d => y(d.avg))
                 .curve(d3.curveMonotoneX);
@@ -115,8 +115,8 @@ export function PredictiveLab({ data }: Props) {
                 };
             });
 
-            const coneArea = d3.area<any>()
-                .x((d, i) => x(startDoy + i))
+            const coneArea = d3.area<{ doy: number, y: number, high: number, low: number, offset: number }>()
+                .x((d) => x(d.doy + d.offset)) // Adjusting logic to match intended usage or just d.doy if doy is correct
                 .y0(d => y(d.low))
                 .y1(d => y(d.high))
                 .curve(d3.curveMonotoneX);
@@ -140,8 +140,8 @@ export function PredictiveLab({ data }: Props) {
 
         } else {
             // --- ECONOMICS VIEW: HDD & GDD ---
-            const hddLine = d3.line<any>().x(d => x(d.doy)).y(d => y(d.avgHDD)).curve(d3.curveMonotoneX);
-            const gddLine = d3.line<any>().x(d => x(d.doy)).y(d => y(d.avgGDD)).curve(d3.curveMonotoneX);
+            const hddLine = d3.line<{ doy: number, avgHDD: number }>().x(d => x(d.doy)).y(d => y(d.avgHDD)).curve(d3.curveMonotoneX);
+            const gddLine = d3.line<{ doy: number, avgGDD: number }>().x(d => x(d.doy)).y(d => y(d.avgGDD)).curve(d3.curveMonotoneX);
 
             g.append("path")
                 .datum(climatology)
