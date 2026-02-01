@@ -57,6 +57,17 @@ export function Dashboard() {
         <footer className="footer">
           <hr />
           <p>KORD Intel Sandbox | Innovation & Reliability | A CrapDice Production</p>
+          {process.env.NEXT_PUBLIC_BUILD_TIME && (
+            <p style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: '8px' }}>
+              Last updated: {(() => {
+                const date = new Date(process.env.NEXT_PUBLIC_BUILD_TIME);
+                const day = date.getDate();
+                const month = date.toLocaleString('default', { month: 'long' });
+                const time = date.toTimeString().split(' ')[0];
+                return `${day} ${month} ${time}`;
+              })()}
+            </p>
+          )}
         </footer>
       </main>
 

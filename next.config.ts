@@ -31,7 +31,9 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
         ]
       }
-    ];
+  },
+  env: {
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   }
 };
 
