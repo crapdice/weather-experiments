@@ -169,3 +169,105 @@ export function findAnalogYear(recentData: WeatherRecord[], historicalData: Weat
 
     return { year: bestYear, similarityScore };
 }
+
+export interface SnowSeasonStat {
+    season: string;
+    totalSnow: number;
+    rank: number;
+}
+
+export function calculateSeasonalSnowRankings(data: WeatherRecord[], targetDate: Date = new Date()): { rankings: SnowSeasonStat[], currentSeason: SnowSeasonStat | undefined } {
+    // 1. Group by season
+    const seasons = new Map<string, number>();
+    const targetMonth = targetDate.getMonth() + 1;
+    const targetDay = targetDate.getDate();
+
+    data.forEach(d => {
+        // Determine Season Year
+        const m = d.Date.getMonth() + 1; // 1-12
+        const y = d.Date.getFullYear();
+
+        let seasonKey = '';
+        if (m >= 7) {
+            seasonKey = `${y}-${y + 1}`;
+        } else {
+            seasonKey = `${y - 1}-${y}`;
+        }
+
+        // 2. YTD Logic: Include logic match date
+        // Season starts July 1. 
+        // We include data if:
+        // Case A: The record is in July-Dec (Months 7-12). But only if targetMonth is >= recordMonth OR target date is in next year.
+        // Wait, "YTD" means "Year to Date" in the context of the season?
+        // Usually "Snowiest Season Starts" means "Snowfall from July 1 through [Today's Date] of that season".
+
+        // Define day of season (July 1 = 1)
+        // Simple comparison:
+        // If current date is "Jan 31", we include records from July 1 to Jan 31.
+
+        // Target Date Day Of Season (DOS)
+        // July 1 is 0. 
+
+        const getSeasonDOS = (date: Date) => {
+            const m = date.getMonth(); // 0-11
+            // July (6) is start
+            // If m >= 6: offset is m - 6
+            // If m < 6: offset is (12 - 6) + m = 6 + m
+            // This roughly orders months as: July, Aug, ... Dec, Jan, Feb...
+            // Need accurate day count though?
+            // Let's us string comparison "MM-DD". 
+            // Better: offset from July 1st of the season start year.
+
+            // Re-calc season start year for THIS date
+            const y = date.getFullYear();
+            const seasonStartYear = m >= 6 ? y : y - 1;
+            const seasonStart = new Date(seasonStartYear, 6, 1); // July 1
+            return (date.getTime() - seasonStart.getTime());
+        };
+
+        const cutoffDOS = getSeasonDOS(targetDate);
+        const recordDOS = getSeasonDOS(d.Date);
+
+        // However, we must compare "Time into season", ignoring the absolute year.
+        // We can normalize the date to a reference year (e.g. 2000-2001) for comparison.
+
+        const normalizeDate = (date: Date) => {
+            const m = date.getMonth();
+            const day = date.getDate();
+            // If month >= 6 (July+), map to 2000. Else map to 2001.
+            const y = m >= 6 ? 2000 : 2001;
+            return new Date(y, m, day).getTime();
+        };
+
+        if (normalizeDate(d.Date) <= normalizeDate(targetDate)) {
+            // It's within the YTD window
+            const snow = typeof d['Snowfall (in)'] === 'number' ? d['Snowfall (in)'] : 0;
+            seasons.set(seasonKey, (seasons.get(seasonKey) || 0) + snow);
+        }
+    });
+
+    // Convert to array
+    const results: SnowSeasonStat[] = [];
+    seasons.forEach((total, season) => {
+        results.push({ season, totalSnow: total, rank: 0 });
+    });
+
+    // Sort descending
+    results.sort((a, b) => b.totalSnow - a.totalSnow);
+
+    // Assign Rank
+    results.forEach((r, i) => r.rank = i + 1);
+
+    // Identify current season
+    // Current season key based on targetDate
+    const curM = targetDate.getMonth() + 1;
+    const curY = targetDate.getFullYear();
+    const curSeasonKey = curM >= 7 ? `${curY}-${curY + 1}` : `${curY - 1}-${curY}`;
+
+    const currentSeason = results.find(r => r.season === curSeasonKey);
+
+    return {
+        rankings: results,
+        currentSeason
+    };
+}

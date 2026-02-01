@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ClimateStats, WeatherRecord } from '@/utils/weatherData';
+import { SatelliteHeader } from '../SatelliteHeader';
 
 interface DashboardHeaderProps {
     data: WeatherRecord[];
@@ -11,13 +12,35 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ data, stats }: DashboardHeaderProps) {
     return (
         <header className="header">
-            <h1 className="title">KORD Intelligence</h1>
-            <p className="subtitle">
-                Climate Data for Chicago O&apos;Hare | {data.length > 0 ? data[0].Year : '1940'} - {stats?.lastUpdate.getFullYear()}
-            </p>
+            <div className="satellite-container">
+                <SatelliteHeader />
+                <div className="title-overlay">
+                    <h1 className="title">KORD Intelligence</h1>
+                    <p className="subtitle">
+                        Climate Data for Chicago O&apos;Hare | {data.length > 0 ? data[0].Year : '1940'} - {stats?.lastUpdate.getFullYear()}
+                    </p>
+                </div>
+            </div>
             <style jsx>{`
                 .header {
-                    text-align: center;
+                    width: 100%;
+                    margin-bottom: 20px;
+                }
+                .satellite-container {
+                    position: relative;
+                    width: 100%;
+                    /* SatelliteHeader has its own height (300px), but we can contain it */
+                }
+                .title-overlay {
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 30; /* Above scanlines */
+                    pointer-events: none; /* Let clicks pass through if needed */
+                    text-shadow: 0 4px 20px rgba(0,0,0,0.8);
                 }
                 .title {
                     font-size: 3.5rem;
@@ -30,8 +53,9 @@ export function DashboardHeader({ data, stats }: DashboardHeaderProps) {
                     font-family: var(--font-main);
                 }
                 .subtitle {
-                    color: var(--text-secondary);
+                    color: white; /* Ensure visibility over potential dark/green background */
                     font-size: 1.1rem;
+                    opacity: 0.9;
                 }
                 @media (max-width: 768px) {
                     .title {
