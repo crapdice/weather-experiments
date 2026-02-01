@@ -7,15 +7,17 @@ import { RadialCompass } from '../RadialCompass';
 import { WinterIntensity } from '../WinterIntensity';
 import { SunriseChart } from '../SunriseChart';
 import { PredictiveLab } from '../PredictiveLab';
-import { WeatherRecord } from '@/utils/weatherData';
+import { SeasonalComparisonPanel } from '../SeasonalComparison';
+import { WeatherRecord, ClimateStats } from '@/utils/weatherData';
 
 interface LabContainerProps {
     labTab: string;
     setLabTab: (tab: string) => void;
     data: WeatherRecord[];
+    stats: ClimateStats | null;
 }
 
-export function LabContainer({ labTab, setLabTab, data }: LabContainerProps) {
+export function LabContainer({ labTab, setLabTab, data, stats }: LabContainerProps) {
     return (
         <div className="lab-container">
             <div className="lab-tabs">
@@ -25,6 +27,7 @@ export function LabContainer({ labTab, setLabTab, data }: LabContainerProps) {
                 <button className={labTab === 'winter' ? 'active' : ''} onClick={() => setLabTab('winter')}>Winter Intensity</button>
                 <button className={labTab === 'sunrise' ? 'active' : ''} onClick={() => setLabTab('sunrise')}>Daylight Cycle</button>
                 <button className={labTab === 'predictive' ? 'active' : ''} onClick={() => setLabTab('predictive')}>Predictive Lab</button>
+                <button className={labTab === 'season' ? 'active' : ''} onClick={() => setLabTab('season')}>Season Stats</button>
             </div>
             <div className="lab-content">
                 {labTab === 'stripes' && data.length > 0 && <ClimateStripes data={data} />}
@@ -33,6 +36,12 @@ export function LabContainer({ labTab, setLabTab, data }: LabContainerProps) {
                 {labTab === 'winter' && data.length > 0 && <WinterIntensity data={data} />}
                 {labTab === 'sunrise' && data.length > 0 && <SunriseChart data={data} />}
                 {labTab === 'predictive' && data.length > 0 && <PredictiveLab data={data} />}
+                {labTab === 'season' && stats?.seasonalComparisons && (
+                    <SeasonalComparisonPanel
+                        comparisons={stats.seasonalComparisons}
+                        seasonName={stats.seasonalSnow?.seasonName || 'Current'}
+                    />
+                )}
             </div>
             <style jsx>{`
                 .lab-container {

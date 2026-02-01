@@ -48,7 +48,7 @@ export function Dashboard() {
           {view === 'overview' && data.length > 0 && <OverviewChart data={data} />}
           {view === 'comparison' && data.length > 0 && <ComparisonChart data={data} />}
           {view === 'lab' && (
-            <LabContainer labTab={labTab} setLabTab={setLabTab} data={data} />
+            <LabContainer labTab={labTab} setLabTab={setLabTab} data={data} stats={stats} />
           )}
         </div>
 

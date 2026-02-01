@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear, calculateStats, findLastSimilarDate } from './statisticalEngine';
-import { calculateSeasonalRank } from './seasonalEngine';
+import { calculateSeasonalRank, calculateSeasonalComparisons, SeasonalComparison } from './seasonalEngine';
 import { processAndEnrich, getMoonPhase, getDayOfYear, getSunTimes } from './dataProcessor';
 
 export interface SeasonalRank {
@@ -62,6 +62,7 @@ export interface ClimateStats {
     analogYear?: { year: number, similarityScore: number };
     seasonalRain?: SeasonalRank;
     seasonalSnow?: SeasonalRank;
+    seasonalComparisons?: SeasonalComparison[];
 }
 
 async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number, recentHistory: WeatherRecord[] } | undefined> {
@@ -212,6 +213,10 @@ function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], curren
     stats.seasonalSnow = calculateSeasonalRank(data.filter(d => d.Date >= getSeasonStartDate(currentInfo.time)), data, 'snow');
     stats.seasonalRain = calculateSeasonalRank(data.filter(d => d.Date >= getSeasonStartDate(currentInfo.time)), data, 'rain');
     stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
+
+    // Seasonal comparisons for current season vs historical
+    const currentSeasonData = data.filter(d => d.Date >= getSeasonStartDate(currentInfo.time));
+    stats.seasonalComparisons = calculateSeasonalComparisons(currentSeasonData, data);
 }
 
 function getSeasonStartDate(date: Date): Date {

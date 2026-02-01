@@ -73,3 +73,162 @@ export function calculateSeasonalRank(currentSeason: WeatherRecord[], history: W
         seasonName: targetSeasonName
     };
 }
+
+// --- SEASONAL COMPARISON ANALYTICS ---
+
+export interface SeasonalComparison {
+    metric: string;
+    currentValue: number;
+    rank: number;
+    totalYears: number;
+    percentile: number;
+    historicalBest: { year: number; value: number };
+    historicalWorst: { year: number; value: number };
+    unit: string;
+    higherIsBetter: boolean; // For ranking direction
+}
+
+/**
+ * Calculates the day-into-season index for winter.
+ * Dec 1 = 0, Jan 1 = 31, Feb 28 = 89.
+ */
+function getDayIntoWinter(d: Date): number {
+    const month = d.getMonth();
+    const day = d.getDate();
+    if (month === 11) return day; // Dec 1 = 1, Dec 31 = 31
+    if (month === 0) return 31 + day; // Jan 1 = 32
+    if (month === 1) return 31 + 31 + day; // Feb 1 = 63
+    return 0; // Not a winter month
+}
+
+/**
+ * Finds the longest streak of consecutive days matching a predicate.
+ */
+function findLongestStreak(records: WeatherRecord[], predicate: (r: WeatherRecord) => boolean): number {
+    let maxStreak = 0;
+    let currentStreak = 0;
+    for (const r of records) {
+        if (predicate(r)) {
+            currentStreak++;
+            maxStreak = Math.max(maxStreak, currentStreak);
+        } else {
+            currentStreak = 0;
+        }
+    }
+    return maxStreak;
+}
+
+export function calculateSeasonalComparisons(
+    currentSeason: WeatherRecord[],
+    history: WeatherRecord[]
+): SeasonalComparison[] {
+    if (currentSeason.length === 0) return [];
+
+    const lastDate = currentSeason[currentSeason.length - 1].Date;
+    const targetSeasonName = getSeasonName(lastDate);
+    const targetSeasonYear = getSeasonYear(lastDate);
+    const currentDayIntoSeason = getDayIntoWinter(lastDate);
+
+    // Group historical data by season year
+    const historyInSeason = history.filter(d => getSeasonName(d.Date) === targetSeasonName);
+    const groupedByYear = d3.group(historyInSeason, d => getSeasonYear(d.Date));
+
+    // Filter each historical year to only include days up to same point in season
+    const filteredHistoricalSeasons = new Map<number, WeatherRecord[]>();
+    groupedByYear.forEach((records, year) => {
+        if (year === targetSeasonYear) return; // Skip current year
+        const filtered = records
+            .filter(r => getDayIntoWinter(r.Date) <= currentDayIntoSeason)
+            .sort((a, b) => a.Date.getTime() - b.Date.getTime());
+        if (filtered.length > 0) {
+            filteredHistoricalSeasons.set(year, filtered);
+        }
+    });
+
+    // Add current season
+    filteredHistoricalSeasons.set(targetSeasonYear, currentSeason);
+
+    // --- METRIC CALCULATIONS ---
+    type MetricResult = { year: number; value: number };
+
+    const computeMetric = (
+        fn: (records: WeatherRecord[]) => number
+    ): MetricResult[] => {
+        const results: MetricResult[] = [];
+        filteredHistoricalSeasons.forEach((records, year) => {
+            results.push({ year, value: fn(records) });
+        });
+        return results;
+    };
+
+    // 1. Average Temperature
+    const avgTempResults = computeMetric(recs =>
+        d3.mean(recs, r => r['Avg Temp (°F)']) || 0
+    );
+
+    // 2. Total Snowfall
+    const totalSnowResults = computeMetric(recs =>
+        d3.sum(recs, r => r['Snowfall (in)'] || 0)
+    );
+
+    // 3. Total Precipitation
+    const totalPrecipResults = computeMetric(recs =>
+        d3.sum(recs, r => r['Precipitation (in)'] || 0)
+    );
+
+    // 4. Coldest Day (Min temp)
+    const coldestDayResults = computeMetric(recs =>
+        d3.min(recs, r => r['Min Temp (°F)']) || 0
+    );
+
+    // 5. Longest Warm Streak (days >= 32°F avg)
+    const warmStreakResults = computeMetric(recs =>
+        findLongestStreak(recs, r => r['Avg Temp (°F)'] >= 32)
+    );
+
+    // 6. Heating Degree Days (HDD)
+    const hddResults = computeMetric(recs =>
+        d3.sum(recs, r => r.HDD || Math.max(0, 65 - r['Avg Temp (°F)']))
+    );
+
+    // --- RANKING HELPER ---
+    const buildComparison = (
+        metric: string,
+        unit: string,
+        results: MetricResult[],
+        higherIsBetter: boolean
+    ): SeasonalComparison => {
+        const sorted = [...results].sort((a, b) =>
+            higherIsBetter ? b.value - a.value : a.value - b.value
+        );
+
+        const rank = sorted.findIndex(r => r.year === targetSeasonYear) + 1;
+        const totalYears = sorted.length;
+        const percentile = ((totalYears - rank) / totalYears) * 100;
+
+        const currentEntry = results.find(r => r.year === targetSeasonYear);
+        const best = sorted[0];
+        const worst = sorted[sorted.length - 1];
+
+        return {
+            metric,
+            currentValue: currentEntry?.value || 0,
+            rank,
+            totalYears,
+            percentile,
+            historicalBest: { year: best.year, value: best.value },
+            historicalWorst: { year: worst.year, value: worst.value },
+            unit,
+            higherIsBetter
+        };
+    };
+
+    return [
+        buildComparison('Average Temp', '°F', avgTempResults, false), // Lower is colder
+        buildComparison('Total Snow', '"', totalSnowResults, true), // Higher is snowier
+        buildComparison('Total Precip', '"', totalPrecipResults, true),
+        buildComparison('Coldest Day', '°F', coldestDayResults, false), // Lower is colder
+        buildComparison('Warm Streak', ' days', warmStreakResults, true),
+        buildComparison('Heating Degrees', ' HDD', hddResults, true) // Higher = colder winter
+    ];
+}
