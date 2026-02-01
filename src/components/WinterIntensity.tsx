@@ -175,8 +175,9 @@ export function WinterIntensity({ data }: Props) {
             .attr("stroke-width", 1)
             .attr("d", d3.line<WeatherRecord>().x(d => brushXScale(d.Date)).y(d => brushYScale(d.Snow || 0)).curve(d3.curveLinear));
 
-        gBrush.call(brush)
-            .call(brush.move as unknown as (selection: d3.Selection<SVGGElement, unknown, null, undefined>) => void, xFull.range() as [number, number]);
+        gBrush.call(brush);
+        // @ts-ignore - D3 brush types are notoriously difficult in strict mode
+        gBrush.call(brush.move, xFull.range());
 
         // Labels
         g.append("text").attr("x", 0).attr("y", -10).text("❄️ Historical Snow Accumulation (Inches)").style("fill", "white").style("font-size", "0.75rem").style("font-weight", "bold");
