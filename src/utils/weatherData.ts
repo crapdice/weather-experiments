@@ -2,6 +2,7 @@ import * as d3 from 'd3';
 import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear, calculateStats, findLastSimilarDate } from './statisticalEngine';
 import { calculateSeasonalRank, calculateSeasonalComparisons, SeasonalComparison } from './seasonalEngine';
 import { processAndEnrich, getMoonPhase, getDayOfYear, getSunTimes } from './dataProcessor';
+import { SeasonType, SEASONS, getSeasonNameByDate } from './seasonRegistry';
 
 export interface SeasonalRank {
     rank: number;
@@ -129,19 +130,22 @@ export async function loadWeatherData(url: string): Promise<{ data: WeatherRecor
 
         currentInfo.recentHistory.forEach(rec => {
             const key = rec.Date.toISOString().split('T')[0];
-            const csvRow = {
-                Date: key,
-                'Max Temp (°F)': rec['Max Temp (°F)'],
-                'Min Temp (°F)': rec['Min Temp (°F)'],
-                'Avg Temp (°F)': rec['Avg Temp (°F)'],
-                'Precipitation (in)': rec['Precipitation (in)'],
-                'Snowfall (in)': rec['Snowfall (in)'],
-                'Max Wind Speed (mph)': rec['Max Wind Speed (mph)'],
-                'Max Wind Gust (mph)': rec['Max Wind Gust (mph)'],
-                DayOfYear: 0,
-                Year: 0
-            };
-            dataMap.set(key, csvRow);
+            // ONLY add if not already in the archive
+            if (!dataMap.has(key)) {
+                const csvRow = {
+                    Date: key,
+                    'Max Temp (°F)': rec['Max Temp (°F)'],
+                    'Min Temp (°F)': rec['Min Temp (°F)'],
+                    'Avg Temp (°F)': rec['Avg Temp (°F)'],
+                    'Precipitation (in)': rec['Precipitation (in)'],
+                    'Snowfall (in)': rec['Snowfall (in)'],
+                    'Max Wind Speed (mph)': rec['Max Wind Speed (mph)'],
+                    'Max Wind Gust (mph)': rec['Max Wind Gust (mph)'],
+                    DayOfYear: 0,
+                    Year: 0
+                };
+                dataMap.set(key, csvRow);
+            }
         });
 
         mergedRawData = Array.from(dataMap.values()).sort((a, b) => new Date(a.Date).getTime() - new Date(b.Date).getTime());
@@ -210,25 +214,27 @@ function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], curren
         type: isFreezing ? 'Below Freezing' : 'Above Freezing'
     };
 
-    stats.seasonalSnow = calculateSeasonalRank(data.filter(d => d.Date >= getSeasonStartDate(currentInfo.time)), data, 'snow');
-    stats.seasonalRain = calculateSeasonalRank(data.filter(d => d.Date >= getSeasonStartDate(currentInfo.time)), data, 'rain');
+    const now = currentInfo.time;
+    const currentSeasonName = getSeasonNameByDate(now);
+
+    // Core seasonal ranks
+    stats.seasonalSnow = calculateSeasonalRank(data, data, 'snow');
+    stats.seasonalRain = calculateSeasonalRank(data, data, 'rain');
     stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
 
-    // Seasonal comparisons for current season vs historical
-    const currentSeasonData = data.filter(d => d.Date >= getSeasonStartDate(currentInfo.time));
-    stats.seasonalComparisons = calculateSeasonalComparisons(currentSeasonData, data);
+    // Pass the full dataset as both current and history context. 
+    // The engine's internal windowing (SeasonRegistry) will handle the slicing.
+    stats.seasonalComparisons = calculateSeasonalComparisons(data, data);
 }
 
-function getSeasonStartDate(date: Date): Date {
-    const month = date.getMonth();
-    let seasonStartMonth = 11;
-    if (month >= 2 && month <= 4) seasonStartMonth = 2; // Spring
-    if (month >= 5 && month <= 7) seasonStartMonth = 5; // Summer
-    if (month >= 8 && month <= 10) seasonStartMonth = 8; // Fall
-
-    let startYear = date.getFullYear();
-    if (month < seasonStartMonth) startYear--;
-    return new Date(startYear, seasonStartMonth, 1);
+export function getSeasonStartDate(date: Date, type: SeasonType = 'Winter'): Date {
+    const def = SEASONS[type];
+    const year = date.getFullYear();
+    let startYear = year;
+    if (def.isAcrossYear && date.getMonth() < def.startMonth) {
+        startYear = year - 1;
+    }
+    return new Date(startYear, def.startMonth, def.startDay);
 }
 
 export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {

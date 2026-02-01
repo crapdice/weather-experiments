@@ -1,65 +1,53 @@
 import { WeatherRecord, SeasonalRank } from './weatherData';
 import * as d3 from 'd3';
+import {
+    getSeasonDayIndex,
+    getEffectiveSeasonYear,
+    getSeasonNameByDate,
+    SeasonType,
+    SEASONS
+} from './seasonRegistry';
 
-// Helper to determine the "Season Year"
-// Winter: Dec-Feb.  Dec 2023 is part of "Winter 2024". Jan 2024 is "Winter 2024".
-// Spring: Mar-May (2024)
-// Summer: Jun-Aug (2024)
-// Fall: Sept-Nov (2024)
-function getSeasonYear(d: Date): number {
-    const month = d.getMonth(); // 0-11
-    // Dec (11) pushes to next year for winter grouping
-    if (month === 11) return d.getFullYear() + 1;
-    return d.getFullYear();
-}
+export function calculateSeasonalRank(
+    currentData: WeatherRecord[],
+    history: WeatherRecord[],
+    metric: 'snow' | 'rain'
+): SeasonalRank {
+    if (currentData.length === 0) return { rank: 0, totalYears: 0, value: 0, percentile: 0, seasonName: 'Unknown' };
 
-function getSeasonName(d: Date): string {
-    const month = d.getMonth();
-    if (month === 11 || month <= 1) return 'Winter';
-    if (month >= 2 && month <= 4) return 'Spring';
-    if (month >= 5 && month <= 7) return 'Summer';
-    return 'Fall';
-}
+    const lastRecord = currentData[currentData.length - 1];
+    const lastDate = lastRecord.Date;
 
-export function calculateSeasonalRank(currentSeason: WeatherRecord[], history: WeatherRecord[], metric: 'snow' | 'rain'): SeasonalRank {
-    if (currentSeason.length === 0) return { rank: 0, totalYears: 0, value: 0, percentile: 0, seasonName: 'Unknown' };
+    // Determine the relevant season type
+    const isSnow = metric === 'snow';
+    const seasonType: SeasonType = isSnow ? 'SnowYear' : getSeasonNameByDate(lastDate);
+    const targetSeasonYear = getEffectiveSeasonYear(lastDate, seasonType);
+    const currentDayIndex = getSeasonDayIndex(lastDate, seasonType);
 
-    // const firstDate = currentSeason[0].Date; (removed unused)
-    const lastDate = currentSeason[currentSeason.length - 1].Date;
-    const targetSeasonName = getSeasonName(lastDate);
-    const targetSeasonYear = getSeasonYear(lastDate);
+    const field = isSnow ? 'Snowfall (in)' : 'Precipitation (in)';
 
-    // 1. Calculate Current Total
-    const field = metric === 'snow' ? 'Snowfall (in)' : 'Precipitation (in)';
-    const currentTotal = d3.sum(currentSeason, d => d[field] || 0);
+    // Deduplicate history and currentData by date
+    const dateMap = new Map<string, WeatherRecord>();
+    [...history, ...currentData].forEach(d => {
+        dateMap.set(d.Date.toISOString().split('T')[0], d);
+    });
+    const allData = Array.from(dateMap.values());
 
-    // 2. Filter History for SAME WINDOW (DayOfYear Range) in past years
-    // Window start DOY to Window end DOY.
-    // Handling Winter rollover (Dec -> Jan) requires care.
-    // Strategy: Assign every historical record a "SeasonYear". 
-    // Group by SeasonYear.
-    // Only verify records that fall within the "Season-to-Date" window relative to that season start.
+    const recordsInSeason = allData.filter(d => {
+        const type = isSnow ? 'SnowYear' : getSeasonNameByDate(d.Date);
+        return type === seasonType && getSeasonDayIndex(d.Date, seasonType) <= currentDayIndex;
+    });
 
-    // Easier: Define a "Days Into Season" index?
-    // Dec 1 = Day 0. Jan 1 = Day 31.
-    // Let's use simple Month/Day matching.
-
-    // Filter history to just records matching the season type
-    const historyInSeason = history.filter(d => getSeasonName(d.Date) === targetSeasonName);
-
-    const totalsByYear = d3.rollup(historyInSeason,
+    const totalsByYear = d3.rollup(recordsInSeason,
         (v) => d3.sum(v, d => d[field] || 0),
-        (d) => getSeasonYear(d.Date)
+        (d) => getEffectiveSeasonYear(d.Date, seasonType)
     );
 
-    // Add current season to the map (or overwrite if in history)
-    totalsByYear.set(targetSeasonYear, currentTotal);
+    const currentTotal = totalsByYear.get(targetSeasonYear) || 0;
 
-    // 3. Rank
-    // Sort totals descending
     const allTotals = Array.from(totalsByYear.entries())
         .map(([year, total]) => ({ year, total }))
-        .sort((a, b) => b.total - a.total); // Descending -> #1 is highest
+        .sort((a, b) => b.total - a.total);
 
     const rank = allTotals.findIndex(x => x.year === targetSeasonYear) + 1;
     const totalYears = allTotals.length;
@@ -70,11 +58,9 @@ export function calculateSeasonalRank(currentSeason: WeatherRecord[], history: W
         totalYears,
         value: currentTotal,
         percentile,
-        seasonName: targetSeasonName
+        seasonName: seasonType === 'SnowYear' ? 'Snow' : seasonType
     };
 }
-
-// --- SEASONAL COMPARISON ANALYTICS ---
 
 export interface SeasonalComparison {
     metric: string;
@@ -85,25 +71,9 @@ export interface SeasonalComparison {
     historicalBest: { year: number; value: number };
     historicalWorst: { year: number; value: number };
     unit: string;
-    higherIsBetter: boolean; // For ranking direction
+    higherIsBetter: boolean;
 }
 
-/**
- * Calculates the day-into-season index for winter.
- * Dec 1 = 0, Jan 1 = 31, Feb 28 = 89.
- */
-function getDayIntoWinter(d: Date): number {
-    const month = d.getMonth();
-    const day = d.getDate();
-    if (month === 11) return day; // Dec 1 = 1, Dec 31 = 31
-    if (month === 0) return 31 + day; // Jan 1 = 32
-    if (month === 1) return 31 + 31 + day; // Feb 1 = 63
-    return 0; // Not a winter month
-}
-
-/**
- * Finds the longest streak of consecutive days matching a predicate.
- */
 function findLongestStreak(records: WeatherRecord[], predicate: (r: WeatherRecord) => boolean): number {
     let maxStreak = 0;
     let currentStreak = 0;
@@ -119,116 +89,119 @@ function findLongestStreak(records: WeatherRecord[], predicate: (r: WeatherRecor
 }
 
 export function calculateSeasonalComparisons(
-    currentSeason: WeatherRecord[],
+    currentData: WeatherRecord[],
     history: WeatherRecord[]
 ): SeasonalComparison[] {
-    if (currentSeason.length === 0) return [];
+    if (currentData.length === 0) return [];
 
-    const lastDate = currentSeason[currentSeason.length - 1].Date;
-    const targetSeasonName = getSeasonName(lastDate);
-    const targetSeasonYear = getSeasonYear(lastDate);
-    const currentDayIntoSeason = getDayIntoWinter(lastDate);
+    const lastDate = currentData[currentData.length - 1].Date;
+    const currentSeasonName = getSeasonNameByDate(lastDate);
 
-    // Group historical data by season year
-    const historyInSeason = history.filter(d => getSeasonName(d.Date) === targetSeasonName);
-    const groupedByYear = d3.group(historyInSeason, d => getSeasonYear(d.Date));
+    // We calculate standard metrics for the current METEOROLOGICAL season
+    // except Snow, which always uses the SnowYear (July-June)
+    const snowType: SeasonType = 'SnowYear';
+    const tempType: SeasonType = currentSeasonName;
 
-    // Filter each historical year to only include days up to same point in season
-    const filteredHistoricalSeasons = new Map<number, WeatherRecord[]>();
-    groupedByYear.forEach((records, year) => {
-        if (year === targetSeasonYear) return; // Skip current year
-        const filtered = records
-            .filter(r => getDayIntoWinter(r.Date) <= currentDayIntoSeason)
-            .sort((a, b) => a.Date.getTime() - b.Date.getTime());
-        if (filtered.length > 0) {
-            filteredHistoricalSeasons.set(year, filtered);
-        }
+    const currentSnowIdx = getSeasonDayIndex(lastDate, snowType);
+    const currentTempIdx = getSeasonDayIndex(lastDate, tempType);
+    const targetSnowYear = getEffectiveSeasonYear(lastDate, snowType);
+    const targetTempYear = getEffectiveSeasonYear(lastDate, tempType);
+
+    // Deduplicate history and currentData by date
+    const dateMap = new Map<string, WeatherRecord>();
+    [...history, ...currentData].forEach(d => {
+        dateMap.set(d.Date.toISOString().split('T')[0], d);
+    });
+    const allData = Array.from(dateMap.values());
+
+    // Pre-filter records for efficiency
+    const snowRecords = allData.filter(d => {
+        const idx = getSeasonDayIndex(d.Date, snowType);
+        return idx >= 0 && idx <= currentSnowIdx;
     });
 
-    // Add current season
-    filteredHistoricalSeasons.set(targetSeasonYear, currentSeason);
+    const tempRecords = allData.filter(d => {
+        const dType = getSeasonNameByDate(d.Date);
+        const idx = getSeasonDayIndex(d.Date, tempType);
+        // Only include days that are in the SAME meteorological season as the current day
+        return dType === currentSeasonName && idx >= 0 && idx <= currentTempIdx;
+    });
 
-    // --- METRIC CALCULATIONS ---
+    const groupedSnow = d3.group(snowRecords, d => getEffectiveSeasonYear(d.Date, snowType));
+    const groupedTemp = d3.group(tempRecords, d => getEffectiveSeasonYear(d.Date, tempType));
+
     type MetricResult = { year: number; value: number };
 
-    const computeMetric = (
-        fn: (records: WeatherRecord[]) => number
-    ): MetricResult[] => {
+    const compute = (groups: Map<number, WeatherRecord[]>, fn: (recs: WeatherRecord[]) => number): MetricResult[] => {
         const results: MetricResult[] = [];
-        filteredHistoricalSeasons.forEach((records, year) => {
-            results.push({ year, value: fn(records) });
+        groups.forEach((recs, year) => {
+            results.push({ year, value: fn(recs) });
         });
         return results;
     };
 
-    // 1. Average Temperature
-    const avgTempResults = computeMetric(recs =>
-        d3.mean(recs, r => r['Avg Temp (°F)']) || 0
-    );
+    const metrics = [
+        {
+            name: 'Average Temp',
+            unit: '°F',
+            results: compute(groupedTemp, recs => d3.mean(recs, r => r['Avg Temp (°F)']) || 0),
+            higherIsBetter: false,
+            targetYear: targetTempYear
+        },
+        {
+            name: 'Total Snow',
+            unit: '"',
+            results: compute(groupedSnow, recs => d3.sum(recs, r => r['Snowfall (in)'] || 0)),
+            higherIsBetter: true,
+            targetYear: targetSnowYear
+        },
+        {
+            name: 'Total Precip',
+            unit: '"',
+            results: compute(groupedTemp, recs => d3.sum(recs, r => r['Precipitation (in)'] || 0)),
+            higherIsBetter: true,
+            targetYear: targetTempYear
+        },
+        {
+            name: 'Coldest Day',
+            unit: '°F',
+            results: compute(groupedTemp, recs => d3.min(recs, r => r['Min Temp (°F)']) || 0),
+            higherIsBetter: false,
+            targetYear: targetTempYear
+        },
+        {
+            name: 'Warm Streak',
+            unit: ' d',
+            results: compute(groupedTemp, recs => findLongestStreak(recs, r => r['Avg Temp (°F)'] >= 32)),
+            higherIsBetter: true,
+            targetYear: targetTempYear
+        },
+        {
+            name: 'Heating Degrees',
+            unit: ' HDD',
+            results: compute(groupedTemp, recs => d3.sum(recs, r => r.HDD || 0)),
+            higherIsBetter: true,
+            targetYear: targetTempYear
+        }
+    ];
 
-    // 2. Total Snowfall
-    const totalSnowResults = computeMetric(recs =>
-        d3.sum(recs, r => r['Snowfall (in)'] || 0)
-    );
-
-    // 3. Total Precipitation
-    const totalPrecipResults = computeMetric(recs =>
-        d3.sum(recs, r => r['Precipitation (in)'] || 0)
-    );
-
-    // 4. Coldest Day (Min temp)
-    const coldestDayResults = computeMetric(recs =>
-        d3.min(recs, r => r['Min Temp (°F)']) || 0
-    );
-
-    // 5. Longest Warm Streak (days >= 32°F avg)
-    const warmStreakResults = computeMetric(recs =>
-        findLongestStreak(recs, r => r['Avg Temp (°F)'] >= 32)
-    );
-
-    // 6. Heating Degree Days (HDD)
-    const hddResults = computeMetric(recs =>
-        d3.sum(recs, r => r.HDD || Math.max(0, 65 - r['Avg Temp (°F)']))
-    );
-
-    // --- RANKING HELPER ---
-    const buildComparison = (
-        metric: string,
-        unit: string,
-        results: MetricResult[],
-        higherIsBetter: boolean
-    ): SeasonalComparison => {
-        const sorted = [...results].sort((a, b) =>
-            higherIsBetter ? b.value - a.value : a.value - b.value
-        );
-
-        const rank = sorted.findIndex(r => r.year === targetSeasonYear) + 1;
+    return metrics.map(m => {
+        const sorted = [...m.results].sort((a, b) => m.higherIsBetter ? b.value - a.value : a.value - b.value);
+        const rank = sorted.findIndex(r => r.year === m.targetYear) + 1;
         const totalYears = sorted.length;
-        const percentile = ((totalYears - rank) / totalYears) * 100;
-
-        const currentEntry = results.find(r => r.year === targetSeasonYear);
-        const best = sorted[0];
-        const worst = sorted[sorted.length - 1];
+        const currentEntry = m.results.find(r => r.year === m.targetYear);
 
         return {
-            metric,
+            metric: m.name,
             currentValue: currentEntry?.value || 0,
             rank,
             totalYears,
-            percentile,
-            historicalBest: { year: best.year, value: best.value },
-            historicalWorst: { year: worst.year, value: worst.value },
-            unit,
-            higherIsBetter
+            percentile: ((totalYears - rank) / totalYears) * 100,
+            historicalBest: { year: sorted[0].year, value: sorted[0].value },
+            historicalWorst: { year: sorted[sorted.length - 1].year, value: sorted[sorted.length - 1].value },
+            unit: m.unit,
+            higherIsBetter: m.higherIsBetter
         };
-    };
-
-    return [
-        buildComparison('Average Temp', '°F', avgTempResults, false), // Lower is colder
-        buildComparison('Total Snow', '"', totalSnowResults, true), // Higher is snowier
-        buildComparison('Total Precip', '"', totalPrecipResults, true),
-        buildComparison('Coldest Day', '°F', coldestDayResults, false), // Lower is colder
-        buildComparison('Warm Streak', ' days', warmStreakResults, true),
-        buildComparison('Heating Degrees', ' HDD', hddResults, true) // Higher = colder winter
-    ];
+    });
 }
+

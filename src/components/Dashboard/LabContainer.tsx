@@ -7,7 +7,7 @@ import { RadialCompass } from '../RadialCompass';
 import { WinterIntensity } from '../WinterIntensity';
 import { SunriseChart } from '../SunriseChart';
 import { PredictiveLab } from '../PredictiveLab';
-import { SeasonalComparisonPanel } from '../SeasonalComparison';
+import { SeasonalComparisonPanelV2 } from '../SeasonalComparison';
 import { WeatherRecord, ClimateStats } from '@/utils/weatherData';
 
 interface LabContainerProps {
@@ -37,7 +37,7 @@ export function LabContainer({ labTab, setLabTab, data, stats }: LabContainerPro
                 {labTab === 'sunrise' && data.length > 0 && <SunriseChart data={data} />}
                 {labTab === 'predictive' && data.length > 0 && <PredictiveLab data={data} />}
                 {labTab === 'season' && stats?.seasonalComparisons && (
-                    <SeasonalComparisonPanel
+                    <SeasonalComparisonPanelV2
                         comparisons={stats.seasonalComparisons}
                         seasonName={stats.seasonalSnow?.seasonName || 'Current'}
                     />
