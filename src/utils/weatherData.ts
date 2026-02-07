@@ -60,6 +60,8 @@ export interface ClimateStats {
     lastSimilarDate?: Date;
     zScore?: number;
     currentStreak?: { count: number, startDate: Date, type: string };
+    yoyStreak?: { count: number, type: 'above' | 'below' };
+
     analogYear?: { year: number, similarityScore: number };
     seasonalRain?: SeasonalRank;
     seasonalSnow?: SeasonalRank;

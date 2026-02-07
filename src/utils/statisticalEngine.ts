@@ -33,9 +33,39 @@ export function calculateStats(data: WeatherRecord[], updatedStats?: ClimateStat
         volatility,
         decadalDelta,
         lastUpdate: data[data.length - 1].Date,
-        lastSimilarDate: findLastSimilarDate(data, updatedStats?.todayMax, updatedStats?.todayMin)
+        lastSimilarDate: findLastSimilarDate(data, updatedStats?.todayMax, updatedStats?.todayMin),
+        yoyStreak: calculateYoyStreak(data)
     };
 }
+
+export function calculateYoyStreak(data: WeatherRecord[]): { count: number, type: 'above' | 'below' } {
+    if (data.length === 0) return { count: 0, type: 'above' };
+
+    let count = 0;
+    let type: 'above' | 'below' | null = null;
+
+    // Check from the end of the array backwards
+    for (let i = data.length - 1; i >= 0; i--) {
+        const d = data[i];
+        if (d.ROC1y === undefined) continue; // Skip if no comparison data
+
+        // Use a small epsilon to handle near-zero differences if necessary, 
+        // but simple comparison is usually what's expected.
+        const currentType = d.ROC1y >= 0 ? 'above' : 'below';
+
+        if (type === null) {
+            type = currentType;
+            count = 1;
+        } else if (type === currentType) {
+            count++;
+        } else {
+            break;
+        }
+    }
+
+    return { count, type: type || 'above' };
+}
+
 
 export function findLastSimilarDate(data: WeatherRecord[], todayMax?: number, todayMin?: number): Date | undefined {
     if (todayMax === undefined || todayMin === undefined) return undefined;

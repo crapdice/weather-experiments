@@ -190,7 +190,37 @@ export function D3Chart({
 
         // --- PLOT 2 ---
         g2.append("text").attr("x", 0).attr("y", -10).text("Compared To Last Year").style("fill", "var(--ro-line)").style("font-size", "0.8rem").style("font-weight", "bold");
+
+        // Calculate Streak for the latest data point
+        let streakCount = 0;
+        let streakType: 'above' | 'below' | null = null;
+        for (let i = data.length - 1; i >= 0; i--) {
+            if (data[i].ROC1y === undefined) continue;
+            const currentType = data[i].ROC1y! >= 0 ? 'above' : 'below';
+            if (streakType === null) {
+                streakType = currentType;
+                streakCount = 1;
+            } else if (streakType === currentType) {
+                streakCount++;
+            } else {
+                break;
+            }
+        }
+
+        if (streakCount >= 3) {
+            g2.append("text")
+                .attr("x", width)
+                .attr("y", -10)
+                .attr("text-anchor", "end")
+                .text(`${streakCount} DAY STREAK ${streakType?.toUpperCase()}`)
+                .style("fill", streakType === 'above' ? "#ff4b2b" : "#00d2ff")
+                .style("font-size", "0.7rem")
+                .style("font-weight", "800")
+                .style("letter-spacing", "0.05em");
+        }
+
         g2.append("g").attr("transform", `translate(0,${h2})`).call(d3.axisBottom(x).ticks(width / 100).tickFormat(() => "")).attr("color", "var(--border-subtle)");
+
         g2.append("g").call(d3.axisLeft(y3).ticks(5)).attr("color", "var(--text-secondary)");
         const areaROC = d3.area<WeatherRecord>().x(d => x(d.Date)).y0(y3(0)).y1(d => y3(d.ROC1y || 0)).curve(d3.curveMonotoneX);
         g2.append("path").datum(filteredData.filter(d => d.ROC1y !== undefined)).attr("fill", "var(--ro-line)").attr("opacity", 0.1).attr("d", areaROC);
