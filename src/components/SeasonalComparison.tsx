@@ -112,7 +112,7 @@ export function SeasonalComparisonPanelV2({ comparisons, seasonName }: Props) {
             <div className="panel-header">
                 <div className="header-top">
                     <div className="title-group">
-                        <h3>{seasonName} Rankings <span style={{ fontSize: '0.6rem', opacity: 0.5 }}>v2.1</span></h3>
+                        <h3>Season Rankings - {seasonName}</h3>
                         <p>NEW: Pro/Simple toggles enabled. Comparing {seasonName.toLowerCase()} vs. the last 86 years.</p>
                     </div>
                     <div className="toggle-container">

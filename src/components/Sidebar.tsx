@@ -4,6 +4,8 @@ import React from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { Activity, ArrowLeftRight, FlaskConical, RefreshCw } from 'lucide-react';
 
+import { CITIES, CityConfig } from '@/utils/cityConfig';
+
 interface SidebarProps {
   currentView: string;
   onViewChange: (view: string) => void;
@@ -12,9 +14,11 @@ interface SidebarProps {
   endDate: Date | null;
   isRefreshing: boolean;
   onRefresh: () => void;
+  selectedCity: CityConfig;
+  onCityChange: (city: CityConfig) => void;
 }
 
-export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, isRefreshing, onRefresh }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, isRefreshing, onRefresh, selectedCity, onCityChange }: SidebarProps) {
   const { theme, setTheme } = useTheme();
 
   const themes = [
@@ -52,6 +56,22 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, i
           Climate Lab (Beta)
         </button>
       </nav>
+
+      <div className="sidebar-section">
+        <h3>Target Location</h3>
+        <select
+          className="city-select"
+          value={selectedCity.id}
+          onChange={(e) => {
+            const city = CITIES.find(c => c.id === e.target.value);
+            if (city) onCityChange(city);
+          }}
+        >
+          {CITIES.map(c => (
+            <option key={c.id} value={c.id}>{c.name} ({c.id})</option>
+          ))}
+        </select>
+      </div>
 
       <div className="sidebar-section">
         <h3>Live Intelligence Feed</h3>
@@ -238,6 +258,6 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, i
           }
         }
       `}</style>
-    </aside>
+    </aside >
   );
 }

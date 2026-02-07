@@ -66,9 +66,11 @@ export interface ClimateStats {
     seasonalComparisons?: SeasonalComparison[];
 }
 
-async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number, recentHistory: WeatherRecord[] } | undefined> {
+import { CityConfig } from './cityConfig';
+
+async function fetchCurrentWeather(lat = 41.9742, lng = -87.9073): Promise<{ temp: number, precip: number, wind: number, gust: number, time: Date, todayMax: number, todayMin: number, todayRain: number, todaySnow: number, recentHistory: WeatherRecord[] } | undefined> {
     try {
-        const res = await fetch('/api/weather?type=current');
+        const res = await fetch(`/api/weather?type=current&lat=${lat}&lng=${lng}`);
         if (res.ok) {
             const json = await res.json();
             if (json.current && json.current.temperature_2m !== undefined) {
@@ -111,13 +113,15 @@ async function fetchCurrentWeather(): Promise<{ temp: number, precip: number, wi
     return undefined;
 }
 
-export async function loadWeatherData(url: string): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
+export async function loadWeatherData(url: string, city?: CityConfig): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
     const targetUrl = url.includes('chicago_weather_50years.csv') || url.includes('chicago_weather_enriched.csv')
         ? '/data/chicago_weather_v86.csv'
         : url;
+    const lat = city?.lat ?? 41.9742;
+    const lng = city?.lng ?? -87.9073;
 
     const rawDataCSV = await d3.csv(targetUrl);
-    const currentInfo = await fetchCurrentWeather();
+    const currentInfo = await fetchCurrentWeather(lat, lng);
 
     let mergedRawData: Record<string, string | number | null | undefined>[] = rawDataCSV;
 
@@ -234,13 +238,18 @@ export function getSeasonStartDate(date: Date, type: SeasonType = 'Winter'): Dat
     if (def.isAcrossYear && date.getMonth() < def.startMonth) {
         startYear = year - 1;
     }
+    // ... (previous helper functions)
+
     return new Date(startYear, def.startMonth, def.startDay);
 }
 
-export async function refreshWeatherData(currentData: WeatherRecord[]): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
-    const currentInfo = await fetchCurrentWeather();
+export async function refreshWeatherData(currentData: WeatherRecord[], city?: CityConfig): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
+    const lat = city?.lat ?? 41.9742;
+    const lng = city?.lng ?? -87.9073;
+
+    const currentInfo = await fetchCurrentWeather(lat, lng);
     try {
-        const response = await fetch('/api/weather?type=forecast_past');
+        const response = await fetch(`/api/weather?type=forecast_past&lat=${lat}&lng=${lng}`);
         if (!response.ok) throw new Error(`Weather API error`);
 
         const apiData = await response.json();

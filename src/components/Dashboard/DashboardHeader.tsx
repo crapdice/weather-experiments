@@ -4,20 +4,23 @@ import React from 'react';
 import { ClimateStats, WeatherRecord } from '@/utils/weatherData';
 import { SatelliteHeader } from '../SatelliteHeader';
 
+import { CityConfig } from '@/utils/cityConfig';
+
 interface DashboardHeaderProps {
     data: WeatherRecord[];
     stats: ClimateStats | null;
+    city: CityConfig;
 }
 
-export function DashboardHeader({ data, stats }: DashboardHeaderProps) {
+export function DashboardHeader({ data, stats, city }: DashboardHeaderProps) {
     return (
         <header className="header">
             <div className="satellite-container">
                 <SatelliteHeader />
                 <div className="title-overlay">
-                    <h1 className="title">KORD Intelligence</h1>
+                    <h1 className="title">{city.title}</h1>
                     <p className="subtitle">
-                        Climate Data for Chicago O&apos;Hare | {data.length > 0 ? data[0].Year : '1940'} - {stats?.lastUpdate.getFullYear()}
+                        {city.subtitle} | {data.length > 0 ? data[0].Year : '1940'} - {stats?.lastUpdate.getFullYear()}
                     </p>
                 </div>
             </div>

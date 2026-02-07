@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { loadWeatherData, refreshWeatherData, WeatherRecord, ClimateStats } from '@/utils/weatherData';
+import { CityConfig } from '@/utils/cityConfig';
 
-export function useWeather(csvPath: string = '/data/chicago_weather_v86.csv') {
+export function useWeather(city: CityConfig) {
     const [data, setData] = useState<WeatherRecord[]>([]);
     const [stats, setStats] = useState<ClimateStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -9,8 +10,9 @@ export function useWeather(csvPath: string = '/data/chicago_weather_v86.csv') {
 
     useEffect(() => {
         async function init() {
+            setLoading(true); // Ensure loading state is true when city changes
             try {
-                const { data, stats } = await loadWeatherData(csvPath);
+                const { data, stats } = await loadWeatherData(city.file, city);
                 setData(data);
                 setStats(stats);
             } catch (err) {
@@ -20,13 +22,13 @@ export function useWeather(csvPath: string = '/data/chicago_weather_v86.csv') {
             }
         }
         init();
-    }, [csvPath]);
+    }, [city]); // Dependent on city object
 
     const handleRefresh = async () => {
         if (refreshing || data.length === 0) return;
         setRefreshing(true);
         try {
-            const { data: newData, stats: newStats } = await refreshWeatherData(data);
+            const { data: newData, stats: newStats } = await refreshWeatherData(data, city);
             setData(newData);
             setStats(newStats);
         } catch (err) {

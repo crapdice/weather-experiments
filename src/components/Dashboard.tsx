@@ -7,6 +7,8 @@ import { OverviewChart } from './OverviewChart';
 import { ComparisonChart } from './ComparisonChart';
 import { useWeather } from '@/hooks/useWeather';
 
+import { CITIES } from '@/utils/cityConfig';
+
 // Refactored Sub-components
 import { LoadingState } from './Dashboard/LoadingState';
 import { DashboardHeader } from './Dashboard/DashboardHeader';
@@ -14,7 +16,8 @@ import { SummaryMetrics } from './Dashboard/SummaryMetrics';
 import { LabContainer } from './Dashboard/LabContainer';
 
 export function Dashboard() {
-  const { data, stats, loading, refreshing, handleRefresh } = useWeather();
+  const [selectedCity, setSelectedCity] = useState(CITIES[0]);
+  const { data, stats, loading, refreshing, handleRefresh } = useWeather(selectedCity);
   const [view, setView] = useState('overview');
   const [labTab, setLabTab] = useState('stripes');
 
@@ -30,6 +33,8 @@ export function Dashboard() {
         endDate={data.length > 0 ? data[data.length - 1].Date : null}
         isRefreshing={refreshing}
         onRefresh={handleRefresh}
+        selectedCity={selectedCity}
+        onCityChange={setSelectedCity}
       />
 
       <MobileNav
@@ -40,7 +45,7 @@ export function Dashboard() {
       />
 
       <main className="main-content">
-        <DashboardHeader data={data} stats={stats} />
+        <DashboardHeader data={data} stats={stats} city={selectedCity} />
 
         <SummaryMetrics data={data} stats={stats} />
 

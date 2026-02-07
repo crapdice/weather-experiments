@@ -51,20 +51,30 @@ describe('weatherData integration', () => {
             }
         };
 
-        vi.mocked(global.fetch).mockImplementation((url: any) => {
-            if (url.includes('type=current')) {
-                return Promise.resolve({
-                    ok: true,
-                    json: () => Promise.resolve(mockApiCurrent)
-                } as any);
-            }
-            if (url.includes('type=forecast_past')) {
+        vi.mocked(global.fetch).mockImplementation((input: string | URL | Request) => {
+            const url = input.toString();
+            if (url.includes('forecast')) { // simplified check to match both
                 return Promise.resolve({
                     ok: true,
                     json: () => Promise.resolve(mockApiDaily)
-                } as any);
+                } as Response);
             }
-            return Promise.resolve({ ok: false } as any);
+            // ... logic for current
+
+            // Actually, the original logic was specific. Let's replicate it safer.
+            if (url.includes('type=current') || url.includes('forecast?')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve(mockApiCurrent)
+                } as Response);
+            }
+            if (url.includes('type=forecast_past') || url.includes('archive')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve(mockApiDaily)
+                } as Response);
+            }
+            return Promise.resolve({ ok: false } as Response);
         });
 
         // Use the date from the mock current weather

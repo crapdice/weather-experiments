@@ -8,6 +8,7 @@ import { WinterIntensity } from '../WinterIntensity';
 import { SunriseChart } from '../SunriseChart';
 import { PredictiveLab } from '../PredictiveLab';
 import { SeasonalComparisonPanelV2 } from '../SeasonalComparison';
+import { WeatherFingerprint } from '../WeatherFingerprint';
 import { WeatherRecord, ClimateStats } from '@/utils/weatherData';
 
 interface LabContainerProps {
@@ -28,6 +29,7 @@ export function LabContainer({ labTab, setLabTab, data, stats }: LabContainerPro
                 <button className={labTab === 'sunrise' ? 'active' : ''} onClick={() => setLabTab('sunrise')}>Daylight Cycle</button>
                 <button className={labTab === 'predictive' ? 'active' : ''} onClick={() => setLabTab('predictive')}>Predictive Lab</button>
                 <button className={labTab === 'season' ? 'active' : ''} onClick={() => setLabTab('season')}>Season Stats</button>
+                <button className={labTab === 'fingerprint' ? 'active' : ''} onClick={() => setLabTab('fingerprint')}>Daily Cypher</button>
             </div>
             <div className="lab-content">
                 {labTab === 'stripes' && data.length > 0 && <ClimateStripes data={data} />}
@@ -42,6 +44,7 @@ export function LabContainer({ labTab, setLabTab, data, stats }: LabContainerPro
                         seasonName={stats.seasonalSnow?.seasonName || 'Current'}
                     />
                 )}
+                {labTab === 'fingerprint' && data.length > 0 && <WeatherFingerprint data={data} />}
             </div>
             <style jsx>{`
                 .lab-container {
