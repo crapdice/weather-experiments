@@ -5,7 +5,8 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAdmin } from '@/context/AdminContext';
 import { Activity, ArrowLeftRight, FlaskConical, RefreshCw, Lock, Key } from 'lucide-react';
 
-import { CITIES, CityConfig } from '@/utils/cityConfig';
+import { CityConfig } from '@/types/weather';
+import { CITIES } from '@/utils/cityConfig';
 
 interface SidebarProps {
   currentView: string;

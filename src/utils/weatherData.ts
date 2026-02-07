@@ -4,8 +4,7 @@ import { calculateSeasonalRank, calculateSeasonalComparisons } from './seasonalE
 import { processAndEnrich, getMoonPhase, getSunTimes } from './dataProcessor';
 import { getDayOfYear } from './dateUtils';
 import { SeasonType, SEASONS, getSeasonNameByDate } from './seasonRegistry';
-import { CityConfig } from './cityConfig';
-import { WeatherRecord, ClimateStats, SeasonalRank, WeatherFetchResult } from '../types/weather';
+import { WeatherRecord, ClimateStats, SeasonalRank, WeatherFetchResult, CityConfig } from '../types/weather';
 import { fetchCurrentWeather } from '../api/weatherFetcher';
 import { finalizeResults } from './weatherProcessor';
 

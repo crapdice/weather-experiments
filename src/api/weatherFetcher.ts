@@ -1,5 +1,4 @@
-import { WeatherRecord, ClimateStats, WeatherFetchResult } from '../types/weather';
-import { CityConfig } from '../utils/cityConfig';
+import { WeatherRecord, ClimateStats, WeatherFetchResult, CityConfig } from '../types/weather';
 import { calculateStats } from '../utils/statisticalEngine';
 import { processAndEnrich } from '../utils/dataProcessor';
 import { finalizeResults } from '../utils/weatherProcessor';

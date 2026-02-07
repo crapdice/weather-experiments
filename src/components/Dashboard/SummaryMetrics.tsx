@@ -2,15 +2,17 @@
 
 import React from 'react';
 import { MetricCard } from '../MetricCard';
-import { ClimateStats, WeatherRecord } from '@/types/weather';
+import { ClimateStats, WeatherRecord, CityConfig } from '@/types/weather';
+import { NarratorCard } from './NarratorCard';
 
 interface SummaryMetricsProps {
     stats: ClimateStats | null;
     data: WeatherRecord[];
+    city: CityConfig;
     isSecondary?: boolean;
 }
 
-export function SummaryMetrics({ stats, data, isSecondary = false }: SummaryMetricsProps) {
+export function SummaryMetrics({ stats, data, city, isSecondary = false }: SummaryMetricsProps) {
     if (isSecondary) {
         return (
             <section className="metrics-grid secondary-metrics">
@@ -64,6 +66,7 @@ export function SummaryMetrics({ stats, data, isSecondary = false }: SummaryMetr
 
     return (
         <section className="metrics-grid">
+            <NarratorCard stats={stats} city={city} />
             <MetricCard
                 label="Current Conditions"
                 value={stats?.currentTemp !== undefined ? `${stats.currentTemp.toFixed(1)}°F` : '--°F'}

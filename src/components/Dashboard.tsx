@@ -83,7 +83,7 @@ export function Dashboard({ initialCityId }: DashboardProps) {
       <main className="main-content">
         <DashboardHeader data={data} stats={stats} city={selectedCity} />
 
-        <SummaryMetrics data={data} stats={stats} />
+        <SummaryMetrics data={data} stats={stats} city={selectedCity} />
 
         <div className="chart-area glass-panel">
           {view === 'overview' && data.length > 0 && <OverviewChart data={data} />}
@@ -93,7 +93,7 @@ export function Dashboard({ initialCityId }: DashboardProps) {
           )}
         </div>
 
-        <SummaryMetrics data={data} stats={stats} isSecondary />
+        <SummaryMetrics data={data} stats={stats} city={selectedCity} isSecondary />
 
         <footer className="footer">
           <hr />

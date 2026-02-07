@@ -1,3 +1,13 @@
+export interface CityConfig {
+    id: string;
+    name: string;
+    file: string;
+    title: string;
+    subtitle: string;
+    lat: number;
+    lng: number;
+}
+
 export interface SeasonalRank {
     rank: number;
     totalYears: number;
