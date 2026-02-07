@@ -212,15 +212,15 @@ export function D3Chart({
         }
 
         const area = d3.area<any>().x(d => x(d.Date)).y0(d => y1(d.MeanLow || 0)).y1(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
-        g1.append("path").datum(plotData).attr("fill", "var(--text-primary)").attr("opacity", 0.05).attr("d", area).attr("clip-path", "url(#clip-main)");
+        g1.append("path").datum(plotData).attr("fill", "var(--text-primary)").attr("opacity", 0.1).attr("d", area).attr("clip-path", "url(#clip-main)");
 
         const lineHigh = d3.line<any>().x(d => x(d.Date)).y(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
         const lineLow = d3.line<any>().x(d => x(d.Date)).y(d => y1(d.MeanLow || 0)).curve(d3.curveMonotoneX);
-        g1.append("path").datum(plotData).attr("fill", "none").attr("stroke", "#800000").attr("stroke-width", 1).attr("opacity", 0.3).attr("d", lineHigh).attr("clip-path", "url(#clip-main)");
-        g1.append("path").datum(plotData).attr("fill", "none").attr("stroke", "#000080").attr("stroke-width", 1).attr("opacity", 0.3).attr("d", lineLow).attr("clip-path", "url(#clip-main)");
+        g1.append("path").datum(plotData).attr("fill", "none").attr("stroke", "#ff3366").attr("stroke-width", 2).attr("opacity", 0.6).attr("d", lineHigh).attr("clip-path", "url(#clip-main)");
+        g1.append("path").datum(plotData).attr("fill", "none").attr("stroke", "#00ccff").attr("stroke-width", 2).attr("opacity", 0.6).attr("d", lineLow).attr("clip-path", "url(#clip-main)");
 
         const lineMean = d3.line<any>().x(d => x(d.Date)).y(d => y1(getAvgTemp(d))).curve(d3.curveMonotoneX);
-        g1.append("path").datum(viewData).attr("fill", "none").attr("stroke", "var(--text-secondary)").attr("stroke-width", 1).attr("opacity", 0.4).attr("d", lineMean);
+        g1.append("path").datum(viewData).attr("fill", "none").attr("stroke", "var(--text-primary)").attr("stroke-width", 1.5).attr("opacity", 0.8).attr("d", lineMean);
 
         // --- PLOT 2 ---
         g2.append("text").attr("x", 0).attr("y", -10).text("Compared To Last Year").style("fill", "var(--ro-line)").style("font-size", "0.8rem").style("font-weight", "bold");
@@ -283,16 +283,16 @@ export function D3Chart({
 
         g2.append("g").call(d3.axisLeft(y3).ticks(5)).attr("color", "var(--text-secondary)");
         const areaROC = d3.area<WeatherRecord>().x(d => x(d.Date)).y0(y3(0)).y1(d => y3(d.ROC1y || 0)).curve(d3.curveMonotoneX);
-        g2.append("path").datum(viewData.filter(d => d.ROC1y !== undefined)).attr("fill", "var(--ro-line)").attr("opacity", 0.1).attr("d", areaROC);
+        g2.append("path").datum(viewData.filter(d => d.ROC1y !== undefined)).attr("fill", "var(--ro-line)").attr("opacity", 0.2).attr("d", areaROC);
         const lineROC = d3.line<WeatherRecord>().x(d => x(d.Date)).y(d => y3(d.ROC1y || 0)).curve(d3.curveMonotoneX);
-        g2.append("path").datum(viewData.filter(d => d.ROC1y !== undefined)).attr("fill", "none").attr("stroke", "var(--ro-line)").attr("stroke-width", 1.5).attr("d", lineROC);
+        g2.append("path").datum(viewData.filter(d => d.ROC1y !== undefined)).attr("fill", "none").attr("stroke", "var(--ro-line)").attr("stroke-width", 3).attr("d", lineROC);
 
         // --- PLOT 3 ---
         g3.append("text").attr("x", 0).attr("y", -10).text(`${smaWindow} Day Average Temperature`).style("fill", "var(--trend-line)").style("font-size", "0.8rem").style("font-weight", "bold");
         g3.append("g").attr("transform", `translate(0,${h3})`).call(d3.axisBottom(x).ticks(width / 100)).attr("color", "var(--text-secondary)");
         g3.append("g").call(d3.axisLeft(y2).ticks(5)).attr("color", "var(--text-secondary)");
         const lineSMA = d3.line<any>().x(d => x(d.Date)).y(d => y2(d.dynamicSma || 0)).curve(d3.curveMonotoneX);
-        g3.append("path").datum(viewData.filter(d => d.dynamicSma !== undefined)).attr("fill", "none").attr("stroke", "var(--trend-line)").attr("stroke-width", 2).attr("d", lineSMA);
+        g3.append("path").datum(viewData.filter(d => d.dynamicSma !== undefined)).attr("fill", "none").attr("stroke", "var(--trend-line)").attr("stroke-width", 3).attr("d", lineSMA);
 
         // Tooltips & Interactivity
         const tooltip = d3.select("body").append("div").attr("class", "chart-tooltip").style("opacity", 0);
