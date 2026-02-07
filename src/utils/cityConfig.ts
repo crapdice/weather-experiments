@@ -12,7 +12,7 @@ export const CITIES: CityConfig[] = [
     {
         id: 'CHI',
         name: 'Chicago',
-        file: '/data/chicago_weather_v86.csv',
+        file: '/api/secure-weather?cityId=CHI',
         title: 'KORD Intelligence',
         subtitle: "Climate Data for Chicago O'Hare",
         lat: 41.9742,
@@ -21,7 +21,7 @@ export const CITIES: CityConfig[] = [
     {
         id: 'NYC',
         name: 'New York',
-        file: '/data/nyc_weather.csv',
+        file: '/api/secure-weather?cityId=NYC',
         title: 'JFK Intelligence',
         subtitle: "Climate Data for New York City",
         lat: 40.7128,
@@ -30,7 +30,7 @@ export const CITIES: CityConfig[] = [
     {
         id: 'MIA',
         name: 'Miami',
-        file: '/data/miami_weather.csv',
+        file: '/api/secure-weather?cityId=MIA',
         title: 'MIA Intelligence',
         subtitle: "Climate Data for Miami Int'l",
         lat: 25.7617,
@@ -39,7 +39,7 @@ export const CITIES: CityConfig[] = [
     {
         id: 'LAX',
         name: 'Los Angeles',
-        file: '/data/la_weather.csv',
+        file: '/api/secure-weather?cityId=LAX',
         title: 'LAX Intelligence',
         subtitle: "Climate Data for Los Angeles",
         lat: 34.0522,
@@ -48,7 +48,7 @@ export const CITIES: CityConfig[] = [
     {
         id: 'DEN',
         name: 'Denver',
-        file: '/data/denver_weather.csv',
+        file: '/api/secure-weather?cityId=DEN',
         title: 'DEN Intelligence',
         subtitle: "Climate Data for Denver Int'l",
         lat: 39.7392,
@@ -57,7 +57,7 @@ export const CITIES: CityConfig[] = [
     {
         id: 'PHX',
         name: 'Phoenix',
-        file: '/data/phoenix_weather.csv',
+        file: '/api/secure-weather?cityId=PHX',
         title: 'PHX Intelligence',
         subtitle: "Climate Data for Phoenix Sky Harbor",
         lat: 33.4484,
@@ -66,7 +66,7 @@ export const CITIES: CityConfig[] = [
     {
         id: 'PAR',
         name: 'Parrish, FL',
-        file: '/data/parrish_weather.csv',
+        file: '/api/secure-weather?cityId=PAR',
         title: 'Parrish Intelligence',
         subtitle: "Climate Data for Parrish, FL",
         lat: 27.5815,

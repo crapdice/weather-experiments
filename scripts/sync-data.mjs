@@ -6,17 +6,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.join(__dirname, '..');
 
-// Helper to extract city config from TS file without a heavy loader
+// Map city IDs to their private file names (must match API route)
+const CITY_FILES = {
+    'CHI': { name: 'Chicago', file: 'chicago_weather_v86.csv', lat: 41.9742, lng: -87.9073 },
+    'NYC': { name: 'New York', file: 'nyc_weather.csv', lat: 40.7128, lng: -74.0060 },
+    'MIA': { name: 'Miami', file: 'miami_weather.csv', lat: 25.7617, lng: -80.1918 },
+    'LAX': { name: 'Los Angeles', file: 'la_weather.csv', lat: 34.0522, lng: -118.2437 },
+    'DEN': { name: 'Denver', file: 'denver_weather.csv', lat: 39.7392, lng: -104.9903 },
+    'PHX': { name: 'Phoenix', file: 'phoenix_weather.csv', lat: 33.4484, lng: -112.0740 },
+    'PAR': { name: 'Parrish, FL', file: 'parrish_weather.csv', lat: 27.5815, lng: -82.4220 },
+};
+
 function getCities() {
-    const configPath = path.join(ROOT, 'src/utils/cityConfig.ts');
-    const content = fs.readFileSync(configPath, 'utf8');
-    const regex = /id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?file:\s*'([^']+)'[\s\S]*?lat:\s*([\d.-]+)[\s\S]*?lng:\s*([\d.-]+)/g;
-    return [...content.matchAll(regex)].map(m => ({
-        id: m[1],
-        name: m[2],
-        file: m[3],
-        lat: parseFloat(m[4]),
-        lng: parseFloat(m[5])
+    return Object.entries(CITY_FILES).map(([id, config]) => ({
+        id,
+        name: config.name,
+        file: config.file,
+        lat: config.lat,
+        lng: config.lng
     }));
 }
 
@@ -58,9 +65,8 @@ function parseACISValue(val) {
 }
 
 async function syncCity(city) {
-    // Standardize file path (remove leading slash if present)
-    const relativeFile = city.file.startsWith('/') ? city.file.slice(1) : city.file;
-    const csvPath = path.join(ROOT, 'public', relativeFile);
+    // Use private_data directory
+    const csvPath = path.join(ROOT, 'private_data', city.file);
 
     console.log(`\n[${city.id}] Syncing ${city.name}...`);
 

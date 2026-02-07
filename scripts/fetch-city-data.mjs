@@ -63,7 +63,7 @@ async function main() {
         rows.push(`${date},${max},${min},${avg},${precip},${snow},${wind},${gust}`);
     }
 
-    const outputPath = path.join(__dirname, '../public/data', filename);
+    const outputPath = path.join(__dirname, '../private_data', filename);
     fs.writeFileSync(outputPath, rows.join('\n'));
     console.log(`Successfully wrote ${rows.length - 1} records to ${outputPath}`);
 }
