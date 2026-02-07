@@ -62,5 +62,14 @@ export const CITIES: CityConfig[] = [
         subtitle: "Climate Data for Phoenix Sky Harbor",
         lat: 33.4484,
         lng: -112.0740
+    },
+    {
+        id: 'PAR',
+        name: 'Parrish, FL',
+        file: '/data/parrish_weather.csv',
+        title: 'Parrish Intelligence',
+        subtitle: "Climate Data for Parrish, FL",
+        lat: 27.5815,
+        lng: -82.4220
     }
 ];
