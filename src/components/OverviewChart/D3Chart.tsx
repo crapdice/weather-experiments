@@ -189,7 +189,7 @@ export function D3Chart({
         g1.append("path").datum(filteredData).attr("fill", "none").attr("stroke", "var(--text-secondary)").attr("stroke-width", 1).attr("opacity", 0.4).attr("d", lineMean);
 
         // --- PLOT 2 ---
-        g2.append("text").attr("x", 0).attr("y", -10).text("Year-over-Year Variance Delta").style("fill", "var(--ro-line)").style("font-size", "0.8rem").style("font-weight", "bold");
+        g2.append("text").attr("x", 0).attr("y", -10).text("Compared To Last Year").style("fill", "var(--ro-line)").style("font-size", "0.8rem").style("font-weight", "bold");
         g2.append("g").attr("transform", `translate(0,${h2})`).call(d3.axisBottom(x).ticks(width / 100).tickFormat(() => "")).attr("color", "var(--border-subtle)");
         g2.append("g").call(d3.axisLeft(y3).ticks(5)).attr("color", "var(--text-secondary)");
         const areaROC = d3.area<WeatherRecord>().x(d => x(d.Date)).y0(y3(0)).y1(d => y3(d.ROC1y || 0)).curve(d3.curveMonotoneX);
@@ -198,7 +198,7 @@ export function D3Chart({
         g2.append("path").datum(filteredData.filter(d => d.ROC1y !== undefined)).attr("fill", "none").attr("stroke", "var(--ro-line)").attr("stroke-width", 1.5).attr("d", lineROC);
 
         // --- PLOT 3 ---
-        g3.append("text").attr("x", 0).attr("y", -10).text("7-Day Volatility Trend").style("fill", "var(--trend-line)").style("font-size", "0.8rem").style("font-weight", "bold");
+        g3.append("text").attr("x", 0).attr("y", -10).text("7 Day Average Temperature").style("fill", "var(--trend-line)").style("font-size", "0.8rem").style("font-weight", "bold");
         g3.append("g").attr("transform", `translate(0,${h3})`).call(d3.axisBottom(x).ticks(width / 100)).attr("color", "var(--text-secondary)");
         g3.append("g").call(d3.axisLeft(y2).ticks(5)).attr("color", "var(--text-secondary)");
         const lineSMA = d3.line<WeatherRecord>().x(d => x(d.Date)).y(d => y2(d.SMA7 || 0)).curve(d3.curveMonotoneX);
