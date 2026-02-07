@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ClimateStats, CityConfig } from '@/types/weather';
 import { Sparkles, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { useAdmin } from '@/context/AdminContext';
 
 interface NarratorCardProps {
     stats: ClimateStats | null;
@@ -15,24 +16,30 @@ interface Briefing {
 }
 
 export function NarratorCard({ stats, city }: NarratorCardProps) {
+    const { isAdmin } = useAdmin();
     const [briefing, setBriefing] = useState<Briefing | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const generateBriefing = async () => {
+    const generateBriefing = async (forceRefetch = false) => {
         if (!stats) return;
 
         setLoading(true);
         setError(null);
 
         try {
-            // Check session storage first
             const cacheKey = `briefing_${city.id}_${new Date().toISOString().split('T')[0]}`;
-            const cached = sessionStorage.getItem(cacheKey);
-            if (cached) {
-                setBriefing(JSON.parse(cached));
-                setLoading(false);
-                return;
+
+            if (!forceRefetch) {
+                const cached = sessionStorage.getItem(cacheKey);
+                if (cached) {
+                    setBriefing(JSON.parse(cached));
+                    setLoading(false);
+                    return;
+                }
+            } else {
+                // Clear cache for this key if forcing
+                sessionStorage.removeItem(cacheKey);
             }
 
             const response = await fetch('/api/narrator', {
@@ -72,14 +79,16 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                     <Sparkles size={16} className="sparkle-icon" />
                     <h3>Daily Briefing</h3>
                 </div>
-                <button
-                    className={`refresh-mini ${loading ? 'spinning' : ''}`}
-                    onClick={generateBriefing}
-                    disabled={loading}
-                    title="Regenerate Insights"
-                >
-                    <RefreshCcw size={14} />
-                </button>
+                {isAdmin && (
+                    <button
+                        className={`refresh-mini ${loading ? 'spinning' : ''}`}
+                        onClick={() => generateBriefing(true)}
+                        disabled={loading}
+                        title="Regenerate Insights (Admin Only)"
+                    >
+                        <RefreshCcw size={14} />
+                    </button>
+                )}
             </div>
 
             <div className="card-content">
@@ -93,7 +102,7 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                     <div className="error-state">
                         <AlertTriangle size={20} />
                         <p>{error}</p>
-                        <button onClick={generateBriefing}>Retry</button>
+                        <button onClick={() => generateBriefing(true)}>Retry</button>
                     </div>
                 ) : briefing ? (
                     <>
@@ -106,7 +115,7 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
             </div>
 
             <div className="card-footer">
-                <span className="ai-badge">Gemini 1.5 Flash</span>
+                <span className="ai-badge">Gemini 2.0 Flash</span>
                 <span className="location-tag">{city.name} Station</span>
             </div>
 

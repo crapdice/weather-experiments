@@ -82,6 +82,9 @@ export interface ClimateStats {
     seasonalRain?: SeasonalRank;
     seasonalSnow?: SeasonalRank;
     seasonalComparisons?: SeasonalComparison[];
+    lookbackYoY?: { period: string, current: number, previous: number, delta: number }[];
+    dailyNormal?: { high: number, low: number, avg: number };
+    seasonalMedians?: { snow: number, rain: number };
 }
 
 export interface WeatherFetchResult {

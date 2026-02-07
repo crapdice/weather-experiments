@@ -100,10 +100,16 @@ export function SummaryMetrics({ stats, data, city, isSecondary = false }: Summa
                 help="The historical year with the most similar weather pattern to the last 30 days."
             />
             {(() => {
-                const sStats = stats?.seasonalSnow?.seasonName === 'Winter' ? stats?.seasonalSnow : stats?.seasonalRain;
-                const unit = stats?.seasonalSnow?.seasonName === 'Winter' ? '" Snow' : '" Rain';
-                const label = sStats?.seasonName + (stats?.seasonalSnow?.seasonName === 'Winter' ? ' Snow' : ' Rain');
+                const month = stats?.currentTempTime ? stats.currentTempTime.getMonth() : new Date().getMonth();
+                // Show snow if we are between Nov (10) and April (3)
+                const isSnowSeason = month >= 10 || month <= 3;
+                const sStats = isSnowSeason ? stats?.seasonalSnow : stats?.seasonalRain;
+
                 if (!sStats) return null;
+
+                const unit = isSnowSeason ? '" Snow' : '" Rain';
+                const label = isSnowSeason ? 'Season Snow' : `${sStats.seasonName} Rain`;
+
                 const rankSuffix = (n: number) => {
                     const j = n % 10, k = n % 100;
                     if (j == 1 && k != 11) return "st";
@@ -113,13 +119,14 @@ export function SummaryMetrics({ stats, data, city, isSecondary = false }: Summa
                 };
                 const rankStr = `${sStats.rank}${rankSuffix(sStats.rank)}`;
                 const description = sStats.rank === 1 ? `Record ${sStats.seasonName}` : sStats.rank <= 5 ? `Top 5 ${sStats.seasonName}` : sStats.rank >= sStats.totalYears - 5 ? `Top 5 Driest` : `${rankStr} Wettest`;
+
                 return (
                     <MetricCard
                         label={label}
                         value={`${sStats.value.toFixed(1)}${unit}`}
                         delta={`${description} (of ${sStats.totalYears} yrs)`}
                         accent={sStats.rank <= 10 ? 'secondary' : 'primary'}
-                        help={`Ranking accumulated precipitation/snow for this season against all winters since 1940.`}
+                        help={`Ranking accumulated ${isSnowSeason ? 'snowfall' : 'precipitation'} for this ${isSnowSeason ? 'Winter (July-June)' : 'season'} against all records since 1940.`}
                     />
                 )
             })()}
