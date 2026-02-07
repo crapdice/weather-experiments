@@ -15,7 +15,7 @@ export function finalizeResults(data: WeatherRecord[], stats: ClimateStats, curr
                 Date: new Date(todayStr + 'T12:00:00Z'),
                 'Max Temp (°F)': currentInfo.todayMax,
                 'Min Temp (°F)': currentInfo.todayMin,
-                'Avg Temp (°F)': currentInfo.temp,
+                'Avg Temp (°F)': (currentInfo.todayMax + currentInfo.todayMin) / 2,
                 'Precipitation (in)': currentInfo.todayRain,
                 'Snowfall (in)': currentInfo.todaySnow,
                 'Max Wind Speed (mph)': currentInfo.wind,
@@ -48,8 +48,9 @@ export function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[],
     const doy = getDayOfYear(new Date());
     const historyForDay = data.filter(d => d.DayOfYear === doy).map(d => d['Avg Temp (°F)']);
 
-    stats.zScore = calculateZScore(currentInfo.temp, historyForDay);
-    stats.todayPercentile = calculatePercentileRank(currentInfo.temp, historyForDay);
+    const dailyProjectedMean = (currentInfo.todayMax + currentInfo.todayMin) / 2;
+    stats.zScore = calculateZScore(dailyProjectedMean, historyForDay);
+    stats.todayPercentile = calculatePercentileRank(dailyProjectedMean, historyForDay);
 
     const recentHistory = data.slice(-30);
     stats.analogYear = findAnalogYear(recentHistory, data);

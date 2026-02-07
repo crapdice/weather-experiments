@@ -71,7 +71,7 @@ export function SummaryMetrics({ stats, data, isSecondary = false }: SummaryMetr
                     high: `${stats.todayMax.toFixed(0)}°`,
                     low: `${stats.todayMin.toFixed(0)}°`
                 } : undefined}
-                delta={stats?.currentTempTime ? `Real-time | ${stats.currentTempTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${stats.currentTempTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` : "Real-time"}
+                delta={stats?.currentTempTime ? `Real-time | ${stats.currentTempTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${stats.currentTempTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` : "Real-time"}
                 accent="secondary"
                 help="The latest temperature reading from KORD via Open-Meteo, with today's high and low."
             />
@@ -85,7 +85,7 @@ export function SummaryMetrics({ stats, data, isSecondary = false }: SummaryMetr
             <MetricCard
                 label={stats?.currentStreak?.type || "Streak"}
                 value={stats?.currentStreak ? `${stats.currentStreak.count} Days` : '--'}
-                delta={`Started ${stats?.currentStreak?.startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`}
+                delta={`Started ${stats?.currentStreak?.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                 accent={stats?.currentStreak && stats.currentStreak.count > 5 ? 'secondary' : 'primary'}
                 help="Consecutive days maintaining the current temperature regime."
             />
