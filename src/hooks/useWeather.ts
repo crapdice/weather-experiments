@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { loadWeatherData, refreshWeatherData, WeatherRecord, ClimateStats } from '@/utils/weatherData';
+import { loadWeatherData } from '@/utils/weatherData';
+import { refreshWeatherData } from '@/api/weatherFetcher';
+import { WeatherRecord, ClimateStats } from '@/types/weather';
 import { CityConfig } from '@/utils/cityConfig';
 
 export function useWeather(city: CityConfig) {

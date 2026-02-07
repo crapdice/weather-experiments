@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateSeasonalRank } from './seasonalEngine';
-import { WeatherRecord } from './weatherData';
+import { WeatherRecord } from '@/types/weather';
 
 // Mock Data Helper
 const createRec = (date: string, snow: number): WeatherRecord => {

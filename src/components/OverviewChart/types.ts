@@ -1,4 +1,4 @@
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
 
 export interface Timeframe {
     label: string;

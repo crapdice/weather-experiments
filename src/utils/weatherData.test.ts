@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { refreshWeatherData, WeatherRecord } from './weatherData';
+import { refreshWeatherData } from '@/api/weatherFetcher';
+import { WeatherRecord } from '@/types/weather';
 
 describe('weatherData integration', () => {
     beforeEach(() => {

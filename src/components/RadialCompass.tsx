@@ -2,25 +2,19 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
+import { getAvgTemp } from '@/utils/weatherAccessors';
+import { useDimensions } from '@/hooks/useDimensions';
 
 interface Props {
     data: WeatherRecord[];
 }
 
 export function RadialCompass({ data }: Props) {
+    const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
+    const { width: containerWidth } = useDimensions(containerRef);
     const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
-    const [width, setWidth] = useState(0);
-
-    useEffect(() => {
-        const handleResize = () => {
-            if (svgRef.current) setWidth(svgRef.current.clientWidth);
-        };
-        handleResize();
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
 
     const years = useMemo(() => {
         return Array.from(new Set(data.map(d => d.Year))).sort((a, b) => a - b);
@@ -31,10 +25,10 @@ export function RadialCompass({ data }: Props) {
     }, [data]);
 
     useEffect(() => {
-        if (!data.length || !svgRef.current) return;
+        if (!data.length || !svgRef.current || containerWidth === 0) return;
 
         const isMobile = window.innerWidth <= 768;
-        const width = svgRef.current.clientWidth;
+        const width = containerWidth;
         const height = isMobile ? 400 : 650;
         const margin = isMobile ? 40 : 60;
         const legendWidth = isMobile ? 0 : 120;
@@ -118,7 +112,7 @@ export function RadialCompass({ data }: Props) {
         // --- RADIAL LINES ---
         const radialLine = d3.radialLine<WeatherRecord>()
             .angle(d => angle(d.DayOfYear))
-            .radius(d => r(d['Avg Temp (°F)']))
+            .radius(d => r(getAvgTemp(d)))
             .curve(d3.curveBasis);
 
         const plotYears = selectedYear === 'all' ? years : [selectedYear];
@@ -178,10 +172,10 @@ export function RadialCompass({ data }: Props) {
                 });
         }
 
-    }, [data, selectedYear, years, yearGroups, width]);
+    }, [data, selectedYear, years, yearGroups, containerWidth]);
 
     return (
-        <div className="radial-container">
+        <div ref={containerRef} className="radial-container">
             <div className="radial-header">
                 <div className="header-text">
                     <h3>Radial Climate Compass</h3>

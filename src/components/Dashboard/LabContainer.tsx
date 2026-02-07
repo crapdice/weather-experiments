@@ -9,7 +9,7 @@ import { SunriseChart } from '../SunriseChart';
 import { PredictiveLab } from '../PredictiveLab';
 import { SeasonalComparisonPanelV2 } from '../SeasonalComparison';
 import { WeatherFingerprint } from '../WeatherFingerprint';
-import { WeatherRecord, ClimateStats } from '@/utils/weatherData';
+import { WeatherRecord, ClimateStats } from '@/types/weather';
 
 interface LabContainerProps {
     labTab: string;

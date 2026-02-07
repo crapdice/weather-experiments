@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { MetricCard } from '../MetricCard';
-import { ClimateStats, WeatherRecord } from '@/utils/weatherData';
+import { ClimateStats, WeatherRecord } from '@/types/weather';
 
 interface SummaryMetricsProps {
     stats: ClimateStats | null;

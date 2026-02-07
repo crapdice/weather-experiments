@@ -1,0 +1,75 @@
+import { WeatherRecord, ClimateStats, WeatherFetchResult } from '../types/weather';
+import { calculateStats, calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear, findLastSimilarDate } from './statisticalEngine';
+import { calculateSeasonalRank, calculateSeasonalComparisons } from './seasonalEngine';
+import { getDayOfYear } from './dateUtils';
+import { getSeasonNameByDate } from './seasonRegistry';
+
+export function finalizeResults(data: WeatherRecord[], stats: ClimateStats, currentInfo?: WeatherFetchResult) {
+    if (currentInfo) {
+        // Ensure today (from observation) exists in data
+        const todayStr = currentInfo.time.toISOString().split('T')[0];
+        const hasToday = data.some(d => d.Date.toISOString().split('T')[0] === todayStr);
+
+        if (!hasToday) {
+            const todayRec: WeatherRecord = {
+                Date: new Date(todayStr + 'T12:00:00Z'),
+                'Max Temp (°F)': currentInfo.todayMax,
+                'Min Temp (°F)': currentInfo.todayMin,
+                'Avg Temp (°F)': currentInfo.temp,
+                'Precipitation (in)': currentInfo.todayRain,
+                'Snowfall (in)': currentInfo.todaySnow,
+                'Max Wind Speed (mph)': currentInfo.wind,
+                'Max Wind Gust (mph)': currentInfo.gust,
+                DayOfYear: getDayOfYear(new Date()),
+                Year: new Date().getFullYear()
+            };
+            data.push(todayRec);
+            data.sort((a, b) => a.Date.getTime() - b.Date.getTime());
+            // Recalculate stats since we added a record
+            Object.assign(stats, calculateStats(data));
+        }
+
+        hydrateRealtimeStats(stats, data, currentInfo);
+    }
+    return { data, stats };
+}
+
+export function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], currentInfo: WeatherFetchResult) {
+    stats.currentTemp = currentInfo.temp;
+    stats.currentPrecip = currentInfo.precip;
+    stats.currentTempTime = currentInfo.time;
+    stats.todayMax = currentInfo.todayMax;
+    stats.todayMin = currentInfo.todayMin;
+    stats.todayRain = currentInfo.todayRain;
+    stats.todaySnow = currentInfo.todaySnow;
+    stats.currentWind = currentInfo.wind;
+    stats.currentGust = currentInfo.gust;
+
+    const doy = getDayOfYear(new Date());
+    const historyForDay = data.filter(d => d.DayOfYear === doy).map(d => d['Avg Temp (°F)']);
+
+    stats.zScore = calculateZScore(currentInfo.temp, historyForDay);
+    stats.todayPercentile = calculatePercentileRank(currentInfo.temp, historyForDay);
+
+    const recentHistory = data.slice(-30);
+    stats.analogYear = findAnalogYear(recentHistory, data);
+
+    const isFreezing = currentInfo.temp < 32;
+    const streakFreezing = findLongestRecentStreak(data, d => isFreezing ? d['Avg Temp (°F)'] < 32 : d['Avg Temp (°F)'] >= 32);
+
+    stats.currentStreak = {
+        count: streakFreezing.count,
+        startDate: streakFreezing.startDate,
+        type: isFreezing ? 'Below Freezing' : 'Above Freezing'
+    };
+
+    const now = currentInfo.time;
+
+    // Core seasonal ranks
+    stats.seasonalSnow = calculateSeasonalRank(data, data, 'snow');
+    stats.seasonalRain = calculateSeasonalRank(data, data, 'rain');
+    stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
+
+    // Pass the full dataset as both current and history context. 
+    stats.seasonalComparisons = calculateSeasonalComparisons(data, data);
+}

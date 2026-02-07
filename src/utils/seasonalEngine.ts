@@ -1,4 +1,4 @@
-import { WeatherRecord, SeasonalRank } from './weatherData';
+import { WeatherRecord, SeasonalRank, SeasonalComparison } from '../types/weather';
 import * as d3 from 'd3';
 import {
     getSeasonDayIndex,
@@ -7,6 +7,8 @@ import {
     SeasonType,
     SEASONS
 } from './seasonRegistry';
+import { formatISODate } from './dateUtils';
+
 
 export function calculateSeasonalRank(
     currentData: WeatherRecord[],
@@ -29,8 +31,9 @@ export function calculateSeasonalRank(
     // Deduplicate history and currentData by date
     const dateMap = new Map<string, WeatherRecord>();
     [...history, ...currentData].forEach(d => {
-        dateMap.set(d.Date.toISOString().split('T')[0], d);
+        dateMap.set(formatISODate(d.Date), d);
     });
+
     const allData = Array.from(dateMap.values());
 
     const recordsInSeason = allData.filter(d => {
@@ -62,17 +65,6 @@ export function calculateSeasonalRank(
     };
 }
 
-export interface SeasonalComparison {
-    metric: string;
-    currentValue: number;
-    rank: number;
-    totalYears: number;
-    percentile: number;
-    historicalBest: { year: number; value: number };
-    historicalWorst: { year: number; value: number };
-    unit: string;
-    higherIsBetter: boolean;
-}
 
 function findLongestStreak(records: WeatherRecord[], predicate: (r: WeatherRecord) => boolean): number {
     let maxStreak = 0;
@@ -110,8 +102,9 @@ export function calculateSeasonalComparisons(
     // Deduplicate history and currentData by date
     const dateMap = new Map<string, WeatherRecord>();
     [...history, ...currentData].forEach(d => {
-        dateMap.set(d.Date.toISOString().split('T')[0], d);
+        dateMap.set(formatISODate(d.Date), d);
     });
+
     const allData = Array.from(dateMap.values());
 
     // Pre-filter records for efficiency

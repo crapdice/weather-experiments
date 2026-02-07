@@ -1,18 +1,17 @@
 import * as d3 from 'd3';
 import SunCalc from 'suncalc';
-import { WeatherRecord, ClimateStats } from './weatherData';
+import { WeatherRecord, ClimateStats } from '@/types/weather';
 import { calculateStats } from './statisticalEngine';
+import { getDayOfYear, formatISODate } from './dateUtils';
+
+
 
 export function getMoonPhase(date: Date): number {
     return SunCalc.getMoonIllumination(date).phase;
 }
 
-export function getDayOfYear(date: Date): number {
-    const start = new Date(date.getFullYear(), 0, 0);
-    const diff = (date.getTime() - start.getTime()) + ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000);
-    const oneDay = 1000 * 60 * 60 * 24;
-    return Math.floor(diff / oneDay);
-}
+
+
 
 export function getSunTimes(date: Date): { Sunrise: Date, Sunset: Date } {
     const times = SunCalc.getTimes(date, 41.9742, -87.9073);
@@ -58,6 +57,16 @@ export function processAndEnrich(rawData: Record<string, unknown>[]): { data: We
         });
     });
 
+    // --- Pre-process Date Map for fast YoY lookup ---
+    const dateMap = new Map<string, WeatherRecord>();
+    data.forEach(d => {
+        const key = formatISODate(d.Date);
+        dateMap.set(key, d);
+    });
+
+
+
+
     // --- Enrich with Analytics ---
     for (let i = 0; i < data.length; i++) {
         const d = data[i];
@@ -68,10 +77,24 @@ export function processAndEnrich(rawData: Record<string, unknown>[]): { data: We
             d.SMA7 = d3.mean(slice, r => r['Avg Temp (°F)']);
         }
 
-        // ROC 1y
-        if (i >= 365) {
-            d.ROC1y = d['Avg Temp (°F)'] - data[i - 365]['Avg Temp (°F)'];
+        // ROC 1y (Exact calendar day comparison)
+        const prevYear = d.Date.getFullYear() - 1;
+        const month = d.Date.getMonth();
+        const day = d.Date.getDate();
+
+        // Construct previous year date safely
+        const prevYearDate = new Date(prevYear, month, day);
+
+        // Verify we haven't rolled over (e.g., Feb 29 -> Mar 1 in non-leap year)
+        // For precision, we ONLY compare if it's the same calendar month and day.
+        if (prevYearDate.getMonth() === month && prevYearDate.getDate() === day) {
+            const prevYearKey = formatISODate(prevYearDate);
+            const prevYearRecord = dateMap.get(prevYearKey);
+            if (prevYearRecord) {
+                d.ROC1y = d['Avg Temp (°F)'] - prevYearRecord['Avg Temp (°F)'];
+            }
         }
+
 
         // Climatology
         const normals = climatologyMap.get(d.DayOfYear);

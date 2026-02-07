@@ -2,10 +2,9 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
-import { WeatherRecord } from '@/utils/weatherData';
-
-// Type-safe accessor for property keys with special characters
-const getMinTemp = (d: WeatherRecord) => d['Min Temp (°F)'];
+import { WeatherRecord } from '@/types/weather';
+import { getMinTemp, getSnowfall } from '@/utils/weatherAccessors';
+import { useDimensions } from '@/hooks/useDimensions';
 
 interface Props {
     data: WeatherRecord[];
@@ -14,16 +13,7 @@ interface Props {
 export function WinterIntensity({ data }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
-    const [widthState, setWidthState] = useState(0);
-
-    useEffect(() => {
-        const handleResize = () => {
-            if (containerRef.current) setWidthState(containerRef.current.clientWidth);
-        };
-        handleResize();
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const { width: containerWidth } = useDimensions(containerRef);
 
     const winterData = useMemo(() => {
         // Filter for winter months (Nov, Dec, Jan, Feb, Mar)
@@ -33,20 +23,20 @@ export function WinterIntensity({ data }: Props) {
         });
     }, [data]);
 
-    const [dateRange, setDateRange] = useState<[Date, Date] | null>(() => {
-        if (winterData.length) {
+    const [dateRange, setDateRange] = useState<[Date, Date] | null>(null);
+
+    // Set initial date range when winterData is available
+    useEffect(() => {
+        if (winterData.length && !dateRange) {
             const end = winterData[winterData.length - 1].Date;
             const start = new Date(end);
             start.setFullYear(start.getFullYear() - 5);
-            return [start < winterData[0].Date ? winterData[0].Date : start, end];
+            setDateRange([start < winterData[0].Date ? winterData[0].Date : start, end]);
         }
-        return null;
-    });
-
-    // Initial date range handled by useState initializer.
+    }, [winterData, dateRange]);
 
     useEffect(() => {
-        if (!winterData.length || !svgRef.current || !containerRef.current || !dateRange) return;
+        if (!winterData.length || !svgRef.current || !containerRef.current || !dateRange || containerWidth === 0) return;
 
         const isMobile = window.innerWidth <= 768;
         const margin = {
@@ -55,7 +45,7 @@ export function WinterIntensity({ data }: Props) {
             bottom: 80,
             left: isMobile ? 30 : 60
         };
-        const width = containerRef.current.clientWidth - margin.left - margin.right;
+        const width = containerWidth - margin.left - margin.right;
         const mainHeight = isMobile ? 250 : 400;
         const brushHeight = 40;
         const padding = 40;
@@ -81,7 +71,7 @@ export function WinterIntensity({ data }: Props) {
             .range([0, width]);
 
         const ySnow = d3.scaleLinear()
-            .domain([0, d3.max(filtered, d => d.Snow || 0)! || 1])
+            .domain([0, d3.max(filtered, d => getSnowfall(d) || 0)! || 1])
             .range([mainHeight, 0]);
 
         const yTemp = d3.scaleLinear()
@@ -100,13 +90,13 @@ export function WinterIntensity({ data }: Props) {
 
         // Snow bars (High Contrast White)
         mainArea.selectAll(".snow-bar-winter")
-            .data(filtered.filter(d => (d.Snow || 0) > 0.05))
+            .data(filtered.filter(d => (getSnowfall(d) || 0) > 0.05))
             .enter().append("rect")
             .attr("class", "snow-bar-winter")
             .attr("x", d => x(d.Date) - Math.max(1, width / filtered.length) / 2)
-            .attr("y", d => ySnow(d.Snow || 0))
+            .attr("y", d => ySnow(getSnowfall(d) || 0))
             .attr("width", Math.max(2, width / filtered.length))
-            .attr("height", d => mainHeight - ySnow(d.Snow || 0))
+            .attr("height", d => mainHeight - ySnow(getSnowfall(d) || 0))
             .attr("fill", "#ffffff")
             .attr("opacity", 0.25);
 
@@ -168,7 +158,7 @@ export function WinterIntensity({ data }: Props) {
             .range([0, width]);
 
         const brushYScale = d3.scaleLinear()
-            .domain(ySnow.domain())
+            .domain([0, d3.max(winterData, d => getSnowfall(d) || 0) || 1])
             .range([brushHeight, 0]);
 
         gBrush.append("path")
@@ -176,7 +166,7 @@ export function WinterIntensity({ data }: Props) {
             .attr("fill", "none")
             .attr("stroke", "rgba(255,255,255,0.1)")
             .attr("stroke-width", 1)
-            .attr("d", d3.line<WeatherRecord>().x(d => brushXScale(d.Date)).y(d => brushYScale(d.Snow || 0)).curve(d3.curveLinear));
+            .attr("d", d3.line<WeatherRecord>().x(d => brushXScale(d.Date)).y(d => brushYScale(getSnowfall(d) || 0)).curve(d3.curveLinear));
 
         gBrush.call(brush);
         const initialRange = xFull.range() as [number, number];
@@ -186,7 +176,16 @@ export function WinterIntensity({ data }: Props) {
         g.append("text").attr("x", 0).attr("y", -10).text("❄️ Historical Snow Accumulation (Inches)").style("fill", "white").style("font-size", "0.75rem").style("font-weight", "bold");
         g.append("text").attr("x", width).attr("y", -10).attr("text-anchor", "end").text("🌡️ Daily Minimums (°F)").style("fill", "#ff3e3e").style("font-size", "0.75rem").style("font-weight", "bold");
 
-    }, [winterData, dateRange, widthState]);
+    }, [winterData, dateRange, containerWidth]);
+
+    const handleReset = () => {
+        if (winterData.length) {
+            const end = winterData[winterData.length - 1].Date;
+            const start = new Date(end);
+            start.setFullYear(start.getFullYear() - 5);
+            setDateRange([start < winterData[0].Date ? winterData[0].Date : start, end]);
+        }
+    };
 
     return (
         <div ref={containerRef} className="winter-intensity-container glass-panel">
@@ -195,14 +194,7 @@ export function WinterIntensity({ data }: Props) {
                     <strong>Winter Intensity Matrix</strong>
                     <span>Archive Precision: Snowfall vs. Sub-Zero Thresholds</span>
                 </div>
-                <button className="reset-btn" onClick={() => {
-                    if (winterData.length) {
-                        const end = winterData[winterData.length - 1].Date;
-                        const start = new Date(end);
-                        start.setFullYear(start.getFullYear() - 5);
-                        setDateRange([start < winterData[0].Date ? winterData[0].Date : start, end]);
-                    }
-                }}>Reset Range</button>
+                <button className="reset-btn" onClick={handleReset}>Reset Range</button>
             </div>
             <div className="chart-body">
                 <svg ref={svgRef} style={{ width: '100%' }}></svg>

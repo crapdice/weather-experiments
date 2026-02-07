@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from 'react';
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
 import { Timeframe, TrendLine } from './types';
 
 export function useOverviewChartState(data: WeatherRecord[]) {

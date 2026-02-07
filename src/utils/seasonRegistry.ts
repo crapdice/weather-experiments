@@ -24,19 +24,36 @@ export const SEASONS: Record<SeasonType, SeasonDefinition> = {
  */
 export function getSeasonDayIndex(date: Date, type: SeasonType): number {
     const def = SEASONS[type];
-    const year = date.getFullYear();
+    const m = date.getMonth();
+    const d = date.getDate();
 
-    let startYear = year;
-    if (def.isAcrossYear && date.getMonth() < def.startMonth) {
-        startYear = year - 1;
+    // Use a reference leap-year window (1999-2000) for consistent indexing.
+    // This ensures February 29th always has its own unique index and subsequent 
+    // dates (like March 1st) don't shift based on the year.
+    let refYear = 1999;
+    if (def.isAcrossYear) {
+        // If the month is before the start month, it's the second half of the season
+        if (m < def.startMonth) refYear = 2000;
+    } else {
+        // For seasons that don't cross year, use 2000 if it contains Feb (Winter/Spring)
+        // Spring (Mar-May) doesn't contain Feb, but we'll use 2000 for consistency.
+        refYear = 2000;
     }
 
-    const startDate = new Date(startYear, def.startMonth, def.startDay);
-    const diffTime = date.getTime() - startDate.getTime();
+    const refDate = new Date(refYear, m, d);
+    const startYear = (refYear === 2000 && m < def.startMonth) ? 1999 : refYear; // Adjust start year if needed
+    // However, for SEASONS like 'Winter' which is across year:
+    // Dec 1999 -> refYear 1999. Jan 2000 -> refYear 2000. StartDate -> Dec 1999.
+    const startMonth = def.startMonth;
+    const startDay = def.startDay;
+    const startDate = new Date(m < startMonth && def.isAcrossYear ? refYear - 1 : refYear, startMonth, startDay);
+
+    const diffTime = refDate.getTime() - startDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    return diffDays >= 0 ? diffDays : -1; // -1 if date is before season start
+    return diffDays >= 0 ? diffDays : -1;
 }
+
 
 /**
  * Returns the effective "Season Year" for grouping.

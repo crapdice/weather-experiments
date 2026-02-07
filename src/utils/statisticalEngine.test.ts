@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear } from './statisticalEngine';
-import { WeatherRecord } from './weatherData';
+import { WeatherRecord } from '@/types/weather';
 
 // Mock Data Utilities
 const createRecord = (date: string, avgTemp: number, precip = 0): WeatherRecord => {
@@ -16,7 +16,7 @@ const createRecord = (date: string, avgTemp: number, precip = 0): WeatherRecord 
         'Max Wind Gust (mph)': 20,
         DayOfYear: d.getDate(),
         Year: d.getFullYear()
-    };
+    } as WeatherRecord;
 };
 
 describe('Statistical Engine', () => {

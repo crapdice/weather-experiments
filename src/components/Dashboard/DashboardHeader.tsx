@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ClimateStats, WeatherRecord } from '@/utils/weatherData';
+import { ClimateStats, WeatherRecord } from '@/types/weather';
 import { SatelliteHeader } from '../SatelliteHeader';
 
 import { CityConfig } from '@/utils/cityConfig';

@@ -2,31 +2,27 @@
 
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import * as d3 from 'd3';
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
+import { getAvgTemp } from '@/utils/weatherAccessors';
+import { useDimensions } from '@/hooks/useDimensions';
 
 interface Props {
     data: WeatherRecord[];
 }
 
 export function ClimateStripes({ data }: Props) {
+    const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
-    const [range, setRange] = useState<[Date, Date] | null>(() => {
-        if (data.length) {
-            // Group by month to find monthly bounds similar to monthlyData
-            return [new Date(data[0].Year, data[0].Date.getMonth(), 1), new Date(data[data.length - 1].Year, data[data.length - 1].Date.getMonth(), 1)];
-        }
-        return null;
-    });
-    const [widthState, setWidthState] = useState(0);
+    const { width: containerWidth } = useDimensions(containerRef);
 
+    const [range, setRange] = useState<[Date, Date] | null>(null);
+
+    // Initial range setup
     useEffect(() => {
-        const handleResize = () => {
-            if (svgRef.current) setWidthState(svgRef.current.clientWidth);
-        };
-        handleResize();
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+        if (data.length && !range) {
+            setRange([new Date(data[0].Year, data[0].Date.getMonth(), 1), new Date(data[data.length - 1].Year, data[data.length - 1].Date.getMonth(), 1)]);
+        }
+    }, [data, range]);
 
     const monthlyData = useMemo(() => {
         const grouped = d3.group(data, d => `${d.Year}-${d.Date.getMonth() + 1}`);
@@ -35,7 +31,7 @@ export function ClimateStripes({ data }: Props) {
             return {
                 year,
                 month,
-                avg: d3.mean(records, r => r['Avg Temp (°F)']) || 0,
+                avg: d3.mean(records, r => getAvgTemp(r)) || 0,
                 date: new Date(year, month - 1, 1)
             };
         });
@@ -48,15 +44,13 @@ export function ClimateStripes({ data }: Props) {
         })).sort((a, b) => a.date.getTime() - b.date.getTime());
     }, [data]);
 
-    // Initial range is handled by useState initializer.
-
     const filteredStripes = useMemo(() => {
         if (!range) return monthlyData;
         return monthlyData.filter(d => d.date >= range[0] && d.date <= range[1]);
     }, [monthlyData, range]);
 
     useEffect(() => {
-        if (!monthlyData.length || !svgRef.current || !range) return;
+        if (!monthlyData.length || !svgRef.current || !range || containerWidth === 0) return;
 
         const isMobile = window.innerWidth <= 768;
         const margin = {
@@ -65,7 +59,7 @@ export function ClimateStripes({ data }: Props) {
             bottom: 80,
             left: isMobile ? 10 : 20
         };
-        const width = svgRef.current.clientWidth - margin.left - margin.right;
+        const width = containerWidth - margin.left - margin.right;
         const mainHeight = isMobile ? 200 : 350;
         const sliderHeight = 30;
 
@@ -267,10 +261,10 @@ export function ClimateStripes({ data }: Props) {
         return () => {
             tooltip.remove();
         };
-    }, [filteredStripes, monthlyData, range, widthState]);
+    }, [filteredStripes, monthlyData, range, containerWidth]);
 
     return (
-        <div className="stripes-container">
+        <div ref={containerRef} className="stripes-container glass-panel">
             <div className="chart-header">
                 <h3>High-Density Climate Stripes</h3>
                 <p>Monthly temperature anomalies relative to full archival seasonal baselines. Red: Warmer | Blue: Cooler.</p>
@@ -278,7 +272,7 @@ export function ClimateStripes({ data }: Props) {
             <svg ref={svgRef} style={{ width: '100%' }}></svg>
             <style jsx>{`
                 .stripes-container {
-                  padding: 10px;
+                  padding: 32px;
                 }
                 .chart-header { margin-bottom: 20px; }
                 h3 { color: var(--accent-1); margin-bottom: 4px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
@@ -291,7 +285,7 @@ export function ClimateStripes({ data }: Props) {
 
                 @media (max-width: 768px) {
                   .stripes-container {
-                    padding: 4px;
+                    padding: 16px;
                   }
                   h3 {
                     font-size: 1rem;

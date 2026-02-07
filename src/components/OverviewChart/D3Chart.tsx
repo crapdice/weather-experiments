@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
 import { TrendLine } from './types';
+import { getAvgTemp, getMaxTemp, getMinTemp, getPrecipitation, getSnowfall } from '@/utils/weatherAccessors';
 
 interface D3ChartProps {
     data: WeatherRecord[];
@@ -76,8 +77,8 @@ export function D3Chart({
 
         const y1 = d3.scaleLinear()
             .domain([
-                d3.min(filteredData, d => d['Min Temp (°F)'])! - 5,
-                d3.max(filteredData, d => d['Max Temp (°F)'])! + 5
+                d3.min(filteredData, getMinTemp)! - 5,
+                d3.max(filteredData, getMaxTemp)! + 5
             ])
             .range([h1, 0]);
 
@@ -96,11 +97,11 @@ export function D3Chart({
             .range([h3, 0]);
 
         const yRain = d3.scaleLinear()
-            .domain([0, d3.max(filteredData, d => d.Rain || 0)! || 1])
+            .domain([0, d3.max(filteredData, getPrecipitation)! || 1])
             .range([h1, 0]);
 
         const ySnow = d3.scaleLinear()
-            .domain([0, d3.max(filteredData, d => d.Snow || 0)! || 1])
+            .domain([0, d3.max(filteredData, getSnowfall)! || 1])
             .range([h1, 0]);
 
         // --- SUBPLOTS ---
@@ -170,11 +171,11 @@ export function D3Chart({
 
         if (showRain) {
             const barWidth = Math.max(2, width / filteredData.length);
-            g1.selectAll(".rain-bar").data(filteredData.filter(d => (d.Rain || 0) > 0)).enter().append("rect").attr("class", "rain-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => yRain(d.Rain || 0)).attr("width", barWidth).attr("height", d => h1 - yRain(d.Rain || 0)).attr("fill", "#00d2ff").attr("opacity", 0.15).attr("pointer-events", "none");
+            g1.selectAll(".rain-bar").data(filteredData.filter(d => getPrecipitation(d) > 0)).enter().append("rect").attr("class", "rain-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => yRain(getPrecipitation(d))).attr("width", barWidth).attr("height", d => h1 - yRain(getPrecipitation(d))).attr("fill", "#00d2ff").attr("opacity", 0.15).attr("pointer-events", "none");
         }
         if (showSnow) {
             const barWidth = Math.max(2, width / filteredData.length);
-            g1.selectAll(".snow-bar").data(filteredData.filter(d => (d.Snow || 0) > 0)).enter().append("rect").attr("class", "snow-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => ySnow(d.Snow || 0)).attr("width", barWidth).attr("height", d => h1 - ySnow(d.Snow || 0)).attr("fill", "#ffffff").attr("opacity", 0.2).attr("pointer-events", "none");
+            g1.selectAll(".snow-bar").data(filteredData.filter(d => getSnowfall(d) > 0)).enter().append("rect").attr("class", "snow-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => ySnow(getSnowfall(d))).attr("width", barWidth).attr("height", d => h1 - ySnow(getSnowfall(d))).attr("fill", "#ffffff").attr("opacity", 0.2).attr("pointer-events", "none");
         }
 
         const area = d3.area<WeatherRecord>().x(d => x(d.Date)).y0(d => y1(d.MeanLow || 0)).y1(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
@@ -185,7 +186,7 @@ export function D3Chart({
         g1.append("path").datum(data).attr("fill", "none").attr("stroke", "#800000").attr("stroke-width", 1).attr("opacity", 0.3).attr("d", lineHigh).attr("clip-path", "url(#clip-main)");
         g1.append("path").datum(data).attr("fill", "none").attr("stroke", "#000080").attr("stroke-width", 1).attr("opacity", 0.3).attr("d", lineLow).attr("clip-path", "url(#clip-main)");
 
-        const lineMean = d3.line<WeatherRecord>().x(d => x(d.Date)).y(d => y1(d['Avg Temp (°F)'])).curve(d3.curveMonotoneX);
+        const lineMean = d3.line<WeatherRecord>().x(d => x(d.Date)).y(d => y1(getAvgTemp(d))).curve(d3.curveMonotoneX);
         g1.append("path").datum(filteredData).attr("fill", "none").attr("stroke", "var(--text-secondary)").attr("stroke-width", 1).attr("opacity", 0.4).attr("d", lineMean);
 
         // --- PLOT 2 ---
@@ -253,7 +254,7 @@ export function D3Chart({
                     </div>
                     <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 2px;">
                         <span>Avg Temp:</span> 
-                        <span style="font-weight: bold;">${d['Avg Temp (°F)'].toFixed(1)}°F</span>
+                        <span style="font-weight: bold;">${getAvgTemp(d).toFixed(1)}°F</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 2px; color: var(--trend-line)">
                         <span>7d SMA:</span> 

@@ -5,7 +5,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as d3 from 'd3';
 import { HelpCircle, X } from 'lucide-react';
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
+import { getAvgTemp } from '@/utils/weatherAccessors';
+import { useDimensions } from '@/hooks/useDimensions';
 
 interface Props {
   data: WeatherRecord[];
@@ -14,6 +16,7 @@ interface Props {
 export function ThermalTopo({ data }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { width: containerWidth } = useDimensions(containerRef);
   const [showInfo, setShowInfo] = React.useState(false);
 
   // Pivot data into a Year x DOY grid
@@ -25,7 +28,7 @@ export function ThermalTopo({ data }: Props) {
 
     const matrix = years.map(year => {
       const yearData = data.filter(d => d.Year === year);
-      const doyMap = new Map(yearData.map(d => [d.DayOfYear, d['Avg Temp (°F)']]));
+      const doyMap = new Map(yearData.map(d => [d.DayOfYear, getAvgTemp(d)]));
       return doys.map(doy => doyMap.get(doy) || 0);
     });
 
@@ -33,11 +36,11 @@ export function ThermalTopo({ data }: Props) {
   }, [data]);
 
   useEffect(() => {
-    if (!grid || !containerRef.current || !canvasRef.current) return;
+    if (!grid || !containerRef.current || !canvasRef.current || containerWidth === 0) return;
 
     const { matrix, years } = grid;
     const isMobile = window.innerWidth <= 768;
-    const width = containerRef.current.clientWidth;
+    const width = containerWidth;
     const height = isMobile ? 400 : 650;
 
     // --- Scene Setup ---
@@ -213,26 +216,14 @@ export function ThermalTopo({ data }: Props) {
     };
     animate();
 
-    const handleResize = () => {
-      if (!containerRef.current) return;
-      const w = containerRef.current.clientWidth;
-      const isMob = window.innerWidth <= 768;
-      const h = isMob ? 400 : 650;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener('resize', handleResize);
-
     return () => {
       cancelAnimationFrame(frameId);
-      window.removeEventListener('resize', handleResize);
       geometry.dispose();
       material.dispose();
       renderer.dispose();
       controls.dispose();
     };
-  }, [grid]);
+  }, [grid, containerWidth]);
 
   return (
     <div ref={containerRef} className="topo-container">

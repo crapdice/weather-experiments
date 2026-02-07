@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { SeasonalComparison } from '@/utils/seasonalEngine';
+import { SeasonalComparison } from '@/types/weather';
 
 interface Props {
     comparisons: SeasonalComparison[];

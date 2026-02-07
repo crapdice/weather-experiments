@@ -2,27 +2,37 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
+import { useDimensions } from '@/hooks/useDimensions';
 
 interface SunriseChartProps {
     data: WeatherRecord[];
 }
 
 export function SunriseChart({ data }: SunriseChartProps) {
+    const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
+    const { width: containerWidth } = useDimensions(containerRef);
 
     useEffect(() => {
-        if (!data || data.length === 0 || !svgRef.current) return;
+        if (!data || data.length === 0 || !svgRef.current || containerWidth === 0) return;
 
-        const margin = { top: 40, right: 40, bottom: 60, left: 60 };
-        const width = 1000 - margin.left - margin.right;
-        const height = 600 - margin.top - margin.bottom;
+        const isMobile = window.innerWidth <= 768;
+        const margin = {
+            top: 40,
+            right: isMobile ? 20 : 40,
+            bottom: 60,
+            left: isMobile ? 40 : 60
+        };
+        const width = containerWidth - margin.left - margin.right;
+        const height = (isMobile ? 400 : 600) - margin.top - margin.bottom;
 
         // Clear previous SVG
         d3.select(svgRef.current).selectAll("*").remove();
 
+        svgRef.current.style.height = `${height + margin.top + margin.bottom}px`;
+
         const svg = d3.select(svgRef.current)
-            .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -94,7 +104,7 @@ export function SunriseChart({ data }: SunriseChartProps) {
                 const date = new Date(2024, 0, dval as number); // Use a leap year for correct mapping
                 return d3.timeFormat("%b")(date);
             })
-            .ticks(12);
+            .ticks(isMobile ? 6 : 12);
 
         const yAxis = d3.axisLeft(yScale)
             .tickValues([0, 4, 8, 12, 16, 20, 24])
@@ -110,20 +120,22 @@ export function SunriseChart({ data }: SunriseChartProps) {
             .style("color", "var(--text-secondary)");
 
         // Labels
-        svg.append("text")
-            .attr("x", width / 2)
-            .attr("y", height + 40)
-            .attr("text-anchor", "middle")
-            .attr("fill", "var(--text-secondary)")
-            .text("Day of Year (Seasonal Cycle)");
+        if (!isMobile) {
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", height + 40)
+                .attr("text-anchor", "middle")
+                .attr("fill", "var(--text-secondary)")
+                .text("Day of Year (Seasonal Cycle)");
 
-        svg.append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("x", -height / 2)
-            .attr("y", -45)
-            .attr("text-anchor", "middle")
-            .attr("fill", "var(--text-secondary)")
-            .text("Time of Day (24h)");
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -45)
+                .attr("text-anchor", "middle")
+                .attr("fill", "var(--text-secondary)")
+                .text("Time of Day (24h)");
+        }
 
         // Reference Lines
         svg.append("line")
@@ -134,14 +146,14 @@ export function SunriseChart({ data }: SunriseChartProps) {
             .attr("stroke", "rgba(255, 255, 255, 0.05)")
             .attr("stroke-dasharray", "4,4");
 
-    }, [data]);
+    }, [data, containerWidth]);
 
     return (
-        <div className="sunrise-chart-container">
+        <div ref={containerRef} className="sunrise-chart-container glass-panel">
             <h3>Daylight Cycle (O&apos;Hare KORD)</h3>
             <p className="chart-description">Visualizing the seasonal contraction and expansion of daylight hours.</p>
             <div className="canvas-wrapper">
-                <svg ref={svgRef}></svg>
+                <svg ref={svgRef} style={{ width: '100%' }}></svg>
             </div>
             <style jsx>{`
                 .sunrise-chart-container {
@@ -154,11 +166,15 @@ export function SunriseChart({ data }: SunriseChartProps) {
                     color: var(--accent-1);
                     font-size: 1.5rem;
                     margin: 0;
+                    text-transform: uppercase;
+                    font-weight: 900;
+                    letter-spacing: 1px;
                 }
                 .chart-description {
                     color: var(--text-secondary);
                     font-size: 0.9rem;
                     max-width: 600px;
+                    font-family: monospace;
                 }
                 .canvas-wrapper {
                     background: rgba(0, 0, 0, 0.2);
@@ -168,7 +184,6 @@ export function SunriseChart({ data }: SunriseChartProps) {
                 }
                 svg {
                     width: 100%;
-                    height: auto;
                     display: block;
                 }
             `}</style>

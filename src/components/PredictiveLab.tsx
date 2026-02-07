@@ -2,7 +2,9 @@
 
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import * as d3 from 'd3';
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
+import { getAvgTemp, getMaxTemp, getMinTemp } from '@/utils/weatherAccessors';
+import { useDimensions } from '@/hooks/useDimensions';
 
 interface Props {
     data: WeatherRecord[];
@@ -11,6 +13,7 @@ interface Props {
 export function PredictiveLab({ data }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
+    const { width: containerWidth } = useDimensions(containerRef);
     const [viewType, setViewType] = useState<'prediction' | 'economics'>('prediction');
 
     // Calculate Climatology (Daily Averages/Spreads over 50 years)
@@ -20,9 +23,9 @@ export function PredictiveLab({ data }: Props) {
             const records = doyGroups.get(i + 1) || [];
             return {
                 doy: i + 1,
-                avg: d3.mean(records, r => r['Avg Temp (°F)']) || 0,
-                max: d3.max(records, r => r['Max Temp (°F)']) || 0,
-                min: d3.min(records, r => r['Min Temp (°F)']) || 0,
+                avg: d3.mean(records, r => getAvgTemp(r)) || 0,
+                max: d3.max(records, r => getMaxTemp(r)) || 0,
+                min: d3.min(records, r => getMinTemp(r)) || 0,
                 avgHDD: d3.mean(records, r => r.HDD || 0) || 0,
                 avgGDD: d3.mean(records, r => r.GDD || 0) || 0,
             };
@@ -31,10 +34,10 @@ export function PredictiveLab({ data }: Props) {
     }, [data]);
 
     useEffect(() => {
-        if (!data.length || !svgRef.current || !containerRef.current) return;
+        if (!data.length || !svgRef.current || !containerRef.current || containerWidth === 0) return;
 
         const margin = { top: 40, right: 60, bottom: 60, left: 60 };
-        const width = containerRef.current.clientWidth - margin.left - margin.right;
+        const width = containerWidth - margin.left - margin.right;
         const height = 500 - margin.top - margin.bottom;
 
         const svg = d3.select(svgRef.current);
@@ -116,7 +119,7 @@ export function PredictiveLab({ data }: Props) {
             });
 
             const coneArea = d3.area<{ doy: number, y: number, high: number, low: number, offset: number }>()
-                .x((d) => x(d.doy + d.offset)) // Adjusting logic to match intended usage or just d.doy if doy is correct
+                .x((d) => x(d.doy + d.offset))
                 .y0(d => y(d.low))
                 .y1(d => y(d.high))
                 .curve(d3.curveMonotoneX);
@@ -169,7 +172,7 @@ export function PredictiveLab({ data }: Props) {
             g.append("text").attr("x", 0).attr("y", -10).text("Climatological Energy & Agricultural Demand").style("fill", "white").style("font-size", "0.8rem").style("font-weight", "bold");
         }
 
-    }, [climatology, viewType, data]);
+    }, [climatology, viewType, data, containerWidth]);
 
     return (
         <div ref={containerRef} className="predictive-lab glass-panel">

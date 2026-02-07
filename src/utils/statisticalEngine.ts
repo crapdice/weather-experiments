@@ -1,5 +1,9 @@
-import { WeatherRecord, ClimateStats } from './weatherData';
+import { WeatherRecord, ClimateStats } from '@/types/weather';
 import * as d3 from 'd3';
+import { getSeasonDayIndex } from './seasonRegistry';
+import { getDayOfYear, formatISODate } from './dateUtils';
+
+
 
 export function calculateStats(data: WeatherRecord[], updatedStats?: ClimateStats): ClimateStats {
     const last30 = data.slice(-30);
@@ -76,11 +80,12 @@ export function findLastSimilarDate(data: WeatherRecord[], todayMax?: number, to
     // Search backwards skipping the very last record if it matches today (to find the *previous* time)
     // Assuming data is sorted by date.
     // If date is today, skip it.
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatISODate(new Date());
 
     for (let i = data.length - 1; i >= 0; i--) {
         const d = data[i];
-        if (d.Date.toISOString().split('T')[0] === todayStr) continue;
+        if (formatISODate(d.Date) === todayStr) continue;
+
 
         if (isCold) {
             if (d['Avg Temp (°F)'] <= todayMean) return d.Date;
@@ -91,12 +96,7 @@ export function findLastSimilarDate(data: WeatherRecord[], todayMax?: number, to
     return undefined;
 }
 
-function getDayOfYear(date: Date): number {
-    const start = new Date(date.getFullYear(), 0, 0);
-    const diff = (date.getTime() - start.getTime()) + ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000);
-    const oneDay = 1000 * 60 * 60 * 24;
-    return Math.floor(diff / oneDay);
-}
+
 
 export function calculatePercentile(data: WeatherRecord[], todayMax?: number, todayMin?: number): number | undefined {
     if (todayMax === undefined || todayMin === undefined) return undefined;
@@ -238,43 +238,16 @@ export function calculateSeasonalSnowRankings(data: WeatherRecord[], targetDate:
         // Target Date Day Of Season (DOS)
         // July 1 is 0. 
 
-        const getSeasonDOS = (date: Date) => {
-            const m = date.getMonth(); // 0-11
-            // July (6) is start
-            // If m >= 6: offset is m - 6
-            // If m < 6: offset is (12 - 6) + m = 6 + m
-            // This roughly orders months as: July, Aug, ... Dec, Jan, Feb...
-            // Need accurate day count though?
-            // Let's us string comparison "MM-DD". 
-            // Better: offset from July 1st of the season start year.
+        const currentDOS = getSeasonDayIndex(d.Date, 'SnowYear');
+        const targetDOS = getSeasonDayIndex(targetDate, 'SnowYear');
 
-            // Re-calc season start year for THIS date
-            const y = date.getFullYear();
-            const seasonStartYear = m >= 6 ? y : y - 1;
-            const seasonStart = new Date(seasonStartYear, 6, 1); // July 1
-            return (date.getTime() - seasonStart.getTime());
-        };
-
-        const cutoffDOS = getSeasonDOS(targetDate);
-        const recordDOS = getSeasonDOS(d.Date);
-
-        // However, we must compare "Time into season", ignoring the absolute year.
-        // We can normalize the date to a reference year (e.g. 2000-2001) for comparison.
-
-        const normalizeDate = (date: Date) => {
-            const m = date.getMonth();
-            const day = date.getDate();
-            // If month >= 6 (July+), map to 2000. Else map to 2001.
-            const y = m >= 6 ? 2000 : 2001;
-            return new Date(y, m, day).getTime();
-        };
-
-        if (normalizeDate(d.Date) <= normalizeDate(targetDate)) {
+        if (currentDOS <= targetDOS && currentDOS !== -1) {
             // It's within the YTD window
             const snow = typeof d['Snowfall (in)'] === 'number' ? d['Snowfall (in)'] : 0;
             seasons.set(seasonKey, (seasons.get(seasonKey) || 0) + snow);
         }
     });
+
 
     // Convert to array
     const results: SnowSeasonStat[] = [];

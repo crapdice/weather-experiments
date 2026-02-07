@@ -2,34 +2,29 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
+import { getAvgTemp } from '@/utils/weatherAccessors';
+import { useDimensions } from '@/hooks/useDimensions';
 
 interface Props {
   data: WeatherRecord[];
 }
 
 export function ComparisonChart({ data }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const { width: containerWidth } = useDimensions(containerRef);
+
   const years = Array.from(new Set(data.map(d => d.Year))).sort((a, b) => b - a);
 
   const [year1, setYear1] = useState(years[0]);
   const [year2, setYear2] = useState(years[Math.min(years.length - 1, 10)]);
-  const [widthState, setWidthState] = useState(0);
 
   useEffect(() => {
-    const handleResize = () => {
-      if (svgRef.current) setWidthState(svgRef.current.clientWidth);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (!data.length || !svgRef.current) return;
+    if (!data.length || !svgRef.current || containerWidth === 0) return;
 
     const margin = { top: 40, right: 40, bottom: 60, left: 60 };
-    const width = svgRef.current.clientWidth - margin.left - margin.right;
+    const width = containerWidth - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
     const svg = d3.select(svgRef.current);
@@ -45,15 +40,15 @@ export function ComparisonChart({ data }: Props) {
     const x = d3.scaleLinear().domain([1, 366]).range([0, width]);
     const y = d3.scaleLinear()
       .domain([
-        d3.min([...data1, ...data2], d => d['Avg Temp (°F)'])! - 5,
-        d3.max([...data1, ...data2], d => d['Avg Temp (°F)'])! + 5
+        d3.min([...data1, ...data2], d => getAvgTemp(d))! - 5,
+        d3.max([...data1, ...data2], d => getAvgTemp(d))! + 5
       ])
       .range([height, 0]);
 
     // Axes
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const xAxis = d3.axisBottom(x)
-      .tickValues([1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335])
+      .tickValues([1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336])
       .tickFormat((d, i) => monthNames[i]);
 
     g.append("g")
@@ -68,7 +63,7 @@ export function ComparisonChart({ data }: Props) {
     // Lines
     const line = d3.line<WeatherRecord>()
       .x(d => x(d.DayOfYear))
-      .y(d => y(d['Avg Temp (°F)']))
+      .y(d => y(getAvgTemp(d)))
       .curve(d3.curveMonotoneX);
 
     g.append("path")
@@ -97,20 +92,28 @@ export function ComparisonChart({ data }: Props) {
     legend.append("line").attr("x1", 0).attr("x2", 20).attr("y1", 20).attr("y2", 20).attr("stroke", "var(--accent-1)").attr("stroke-width", 2).attr("stroke-dasharray", "3,3");
     legend.append("text").attr("x", 25).attr("y", 25).text(year2).style("font-size", "12px").attr("fill", "var(--text-primary)");
 
-  }, [data, year1, year2, widthState]);
+  }, [data, year1, year2, containerWidth]);
 
   return (
-    <div className="comparison-container">
+    <div ref={containerRef} className="comparison-container glass-panel">
       <div className="controls">
         <div className="control-group">
           <label>Primary Year</label>
-          <select value={year1} onChange={(e) => setYear1(Number(e.target.value))}>
+          <select
+            value={year1}
+            onChange={(e) => setYear1(Number(e.target.value))}
+            className="glass-panel"
+          >
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
         <div className="control-group">
           <label>Base Year</label>
-          <select value={year2} onChange={(e) => setYear2(Number(e.target.value))}>
+          <select
+            value={year2}
+            onChange={(e) => setYear2(Number(e.target.value))}
+            className="glass-panel"
+          >
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
@@ -119,6 +122,7 @@ export function ComparisonChart({ data }: Props) {
 
       <style jsx>{`
         .comparison-container {
+          padding: 24px;
           display: flex;
           flex-direction: column;
           gap: 20px;
@@ -159,6 +163,10 @@ export function ComparisonChart({ data }: Props) {
           padding: 8px 12px;
           border-radius: 4px;
           font-family: inherit;
+        }
+        select option {
+            background: #111;
+            color: #fff;
         }
       `}</style>
     </div>

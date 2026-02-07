@@ -4,7 +4,8 @@ import React, { useMemo, Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, MeshDistortMaterial, Environment, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
-import { WeatherRecord } from '@/utils/weatherData';
+import { WeatherRecord } from '@/types/weather';
+import { getAvgTemp, getMaxWindSpeed, getPrecipitation, getSnowfall } from '@/utils/weatherAccessors';
 
 interface Props {
     data: WeatherRecord[];
@@ -13,11 +14,11 @@ interface Props {
 const FingerprintMesh = ({ record }: { record: WeatherRecord }) => {
     const meshRef = useRef<THREE.Mesh>(null);
 
-    // Data Mappings
-    const temp = record['Avg Temp (°F)']; // Range: -20 to 100
-    const wind = record['Max Wind Speed (mph)'] || 5; // Range: 0 to 60
-    const precip = record['Precipitation (in)'] || 0; // Range: 0 to 5
-    const snow = record['Snowfall (in)'] || 0; // Range: 0 to 20
+    // Data Mappings using accessors
+    const temp = getAvgTemp(record); // Range: -20 to 100
+    const wind = getMaxWindSpeed(record) || 5; // Range: 0 to 60
+    const precip = getPrecipitation(record) || 0; // Range: 0 to 5
+    const snow = getSnowfall(record) || 0; // Range: 0 to 20
 
     // 1. Color (Temp)
     // Cold (<32) = Blue/Cyan, Moderate (32-70) = Green/Teal, Hot (>70) = Orange/Red
@@ -45,15 +46,12 @@ const FingerprintMesh = ({ record }: { record: WeatherRecord }) => {
         if (meshRef.current) {
             meshRef.current.rotation.x = state.clock.getElapsedTime() * 0.2;
             meshRef.current.rotation.y = state.clock.getElapsedTime() * 0.3;
-
-            // Pulse size with temp slightly?
-            // meshRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime) * 0.05);
         }
     });
 
     return (
         <mesh ref={meshRef}>
-            <icosahedronGeometry args={[1.5, 30]} /> {/* High detail for smooth distortion */}
+            <icosahedronGeometry args={[1.5, 30]} />
             <MeshDistortMaterial
                 color={color}
                 envMapIntensity={0.8}
@@ -103,6 +101,11 @@ export function WeatherFingerprint({ data }: Props) {
 
     if (!latestRecord) return <div>No Data for Fingerprint</div>;
 
+    const temp = getAvgTemp(latestRecord);
+    const wind = getMaxWindSpeed(latestRecord);
+    const precip = getPrecipitation(latestRecord);
+    const snow = getSnowfall(latestRecord);
+
     return (
         <div className="fingerprint-container glass-panel">
             <div className="fp-header">
@@ -112,10 +115,10 @@ export function WeatherFingerprint({ data }: Props) {
 
             <div className="canvas-wrapper">
                 <div className="fp-stats">
-                    <div className="stat-row"><span>TEMP</span> <span className="val">{latestRecord['Avg Temp (°F)']}°F</span></div>
-                    <div className="stat-row"><span>WIND</span> <span className="val">{Number(latestRecord['Max Wind Speed (mph)']).toFixed(1)} mph</span></div>
-                    <div className="stat-row"><span>PRECIP</span> <span className="val">{latestRecord['Precipitation (in)']} in</span></div>
-                    <div className="stat-row"><span>SNOW</span> <span className="val">{latestRecord['Snowfall (in)']} in</span></div>
+                    <div className="stat-row"><span>TEMP</span> <span className="val">{temp}°F</span></div>
+                    <div className="stat-row"><span>WIND</span> <span className="val">{Number(wind).toFixed(1)} mph</span></div>
+                    <div className="stat-row"><span>PRECIP</span> <span className="val">{precip} in</span></div>
+                    <div className="stat-row"><span>SNOW</span> <span className="val">{snow} in</span></div>
                 </div>
 
                 <Canvas camera={{ position: [0, 0, 4], fov: 45 }}>
@@ -127,8 +130,8 @@ export function WeatherFingerprint({ data }: Props) {
                         <FingerprintMesh record={latestRecord} />
                         <Environment preset="city" />
 
-                        {(latestRecord['Snowfall (in)'] > 0) && <SnowParticles amount={latestRecord['Snowfall (in)']} />}
-                        {(latestRecord['Precipitation (in)'] > 0 && latestRecord['Snowfall (in)'] === 0) && <RainParticles amount={latestRecord['Precipitation (in)']} />}
+                        {(snow > 0) && <SnowParticles amount={snow} />}
+                        {(precip > 0 && snow === 0) && <RainParticles amount={precip} />}
 
                     </Suspense>
                     <OrbitControls autoRotate autoRotateSpeed={0.5} enableZoom={false} />
@@ -178,8 +181,8 @@ export function WeatherFingerprint({ data }: Props) {
                 .stat-row {
                     display: flex;
                     justify-content: space-between;
-                    min-width: 160px; /* Increased to accommodate longer values */
-                    background: rgba(0,0,0,0.6); /* Slightly Darker for readability */
+                    min-width: 160px;
+                    background: rgba(0,0,0,0.6);
                     padding: 6px 10px;
                     border-radius: 4px;
                     border-left: 2px solid var(--accent-1);
