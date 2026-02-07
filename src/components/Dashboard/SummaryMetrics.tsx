@@ -1,9 +1,15 @@
-"use client";
-
 import React from 'react';
 import { MetricCard } from '../MetricCard';
 import { ClimateStats, WeatherRecord, CityConfig } from '@/types/weather';
 import { NarratorCard } from './NarratorCard';
+
+// Specialized Logic-Separated Cards
+import { ConditionsCard } from './Metrics/ConditionsCard';
+import { AnomalyCard } from './Metrics/AnomalyCard';
+import { StreakCard } from './Metrics/StreakCard';
+import { PatternMatchCard } from './Metrics/PatternMatchCard';
+import { SeasonalCard } from './Metrics/SeasonalCard';
+import { WindCard } from './Metrics/WindCard';
 
 interface SummaryMetricsProps {
     stats: ClimateStats | null;
@@ -67,76 +73,20 @@ export function SummaryMetrics({ stats, data, city, isSecondary = false }: Summa
     return (
         <section className="metrics-grid">
             <NarratorCard stats={stats} city={city} />
-            <MetricCard
-                label="Current Conditions"
-                value={stats?.currentTemp !== undefined ? `${stats.currentTemp.toFixed(1)}°F` : '--°F'}
-                subValues={stats?.todayMax !== undefined && stats?.todayMin !== undefined ? {
-                    high: `${stats.todayMax.toFixed(0)}°`,
-                    low: `${stats.todayMin.toFixed(0)}°`
-                } : undefined}
-                delta={stats?.currentTempTime ? `Real-time | ${stats.currentTempTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${stats.currentTempTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` : "Real-time"}
-                accent="secondary"
-                help="The latest temperature reading from KORD via Open-Meteo, with today's high and low."
-            />
-            <MetricCard
-                label={stats?.zScore !== undefined && stats.zScore > 0 ? "Heat Anomaly" : "Cold Anomaly"}
-                value={stats?.zScore ? `${stats.zScore > 0 ? '+' : ''}${stats.zScore.toFixed(1)}σ` : '--'}
-                delta={stats?.todayPercentile ? `Rarer than ${stats.todayPercentile > 50 ? stats.todayPercentile.toFixed(0) : (100 - stats.todayPercentile).toFixed(0)}% of days` : undefined}
-                accent={Math.abs(stats?.zScore || 0) > 2 ? 'ro' : Math.abs(stats?.zScore || 0) > 1 ? 'secondary' : 'primary'}
-                help="Standard Deviation from the mean. ±2σ represents a 1-in-20 year statistical event."
-            />
-            <MetricCard
-                label={stats?.currentStreak?.type || "Streak"}
-                value={stats?.currentStreak ? `${stats.currentStreak.count} Days` : '--'}
-                delta={`Started ${stats?.currentStreak?.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-                accent={stats?.currentStreak && stats.currentStreak.count > 5 ? 'secondary' : 'primary'}
-                help="Consecutive days maintaining the current temperature regime."
-            />
-            <MetricCard
-                label="Pattern Match"
-                value={stats?.analogYear ? stats.analogYear.year.toString() : '--'}
-                delta={stats?.analogYear ? `~${(stats.analogYear.similarityScore * 100).toFixed(0)}% Similarity` : undefined}
-                accent="primary"
-                help="The historical year with the most similar weather pattern to the last 30 days."
-            />
-            {(() => {
-                const month = stats?.currentTempTime ? stats.currentTempTime.getMonth() : new Date().getMonth();
-                // Show snow if we are between Nov (10) and April (3)
-                const isSnowSeason = month >= 10 || month <= 3;
-                const sStats = isSnowSeason ? stats?.seasonalSnow : stats?.seasonalRain;
 
-                if (!sStats) return null;
+            {/* 
+                DESIGNER NOTE: 
+                You can reorder these tags as much as you want! 
+                The logic is safely hidden inside each specialized card.
+            */}
+            <ConditionsCard stats={stats} />
+            <SeasonalCard stats={stats} />
+            <WindCard stats={stats} />
+            <AnomalyCard stats={stats} />
+            <StreakCard stats={stats} />
+            <PatternMatchCard stats={stats} />
 
-                const unit = isSnowSeason ? '" Snow' : '" Rain';
-                const label = isSnowSeason ? 'Season Snow' : `${sStats.seasonName} Rain`;
 
-                const rankSuffix = (n: number) => {
-                    const j = n % 10, k = n % 100;
-                    if (j == 1 && k != 11) return "st";
-                    if (j == 2 && k != 12) return "nd";
-                    if (j == 3 && k != 13) return "rd";
-                    return "th";
-                };
-                const rankStr = `${sStats.rank}${rankSuffix(sStats.rank)}`;
-                const description = sStats.rank === 1 ? `Record ${sStats.seasonName}` : sStats.rank <= 5 ? `Top 5 ${sStats.seasonName}` : sStats.rank >= sStats.totalYears - 5 ? `Top 5 Driest` : `${rankStr} Wettest`;
-
-                return (
-                    <MetricCard
-                        label={label}
-                        value={`${sStats.value.toFixed(1)}${unit}`}
-                        delta={`${description} (of ${sStats.totalYears} yrs)`}
-                        accent={sStats.rank <= 10 ? 'secondary' : 'primary'}
-                        help={`Ranking accumulated ${isSnowSeason ? 'snowfall' : 'precipitation'} for this ${isSnowSeason ? 'Winter (July-June)' : 'season'} against all records since 1940.`}
-                    />
-                )
-            })()}
-            <MetricCard
-                label="Current Wind"
-                value={stats?.currentWind !== undefined ? `${stats.currentWind.toFixed(1)} mph` : '-- mph'}
-                delta={stats?.currentGust ? `Gusts ${stats.currentGust.toFixed(1)} mph` : 'Calm'}
-                accent={stats?.currentWind && stats.currentWind > 15 ? 'ro' : 'secondary'}
-                help="Current sustained wind speed and peak gusts at O'Hare."
-            />
             <style jsx>{`
                 .metrics-grid {
                     display: grid;

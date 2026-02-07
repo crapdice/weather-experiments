@@ -115,7 +115,6 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
             </div>
 
             <div className="card-footer">
-                <span className="ai-badge">Gemini 2.0 Flash</span>
                 <span className="location-tag">{city.name} Station</span>
             </div>
 
@@ -212,11 +211,6 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                     font-weight: 800;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
-                }
-
-                .ai-badge {
-                    color: var(--accent-2);
-                    opacity: 0.8;
                 }
 
                 .location-tag {
