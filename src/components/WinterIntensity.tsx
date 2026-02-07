@@ -4,6 +4,9 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
 import { WeatherRecord } from '@/utils/weatherData';
 
+// Type-safe accessor for property keys with special characters
+const getMinTemp = (d: WeatherRecord) => d['Min Temp (°F)'];
+
 interface Props {
     data: WeatherRecord[];
 }
@@ -82,7 +85,7 @@ export function WinterIntensity({ data }: Props) {
             .range([mainHeight, 0]);
 
         const yTemp = d3.scaleLinear()
-            .domain([d3.min(filtered, d => d['Min Temp (°F)'])! - 5, d3.max(filtered, d => d['Min Temp (°F)'])! + 5])
+            .domain([d3.min(filtered, getMinTemp)! - 5, d3.max(filtered, getMinTemp)! + 5])
             .range([mainHeight, 0]);
 
         // --- CLIP PATH ---
@@ -110,7 +113,7 @@ export function WinterIntensity({ data }: Props) {
         // Temp Line (Stark Cyan/Red Contrast)
         const lineTemp = d3.line<WeatherRecord>()
             .x(d => x(d.Date))
-            .y(d => yTemp(d['Min Temp (°F)']))
+            .y(d => yTemp(getMinTemp(d)))
             .curve(d3.curveMonotoneX);
 
         mainArea.append("path")
@@ -126,7 +129,7 @@ export function WinterIntensity({ data }: Props) {
             .enter().append("circle")
             .attr("class", "temp-dot")
             .attr("cx", d => x(d.Date))
-            .attr("cy", d => yTemp(d['Min Temp (°F)']))
+            .attr("cy", d => yTemp(getMinTemp(d)))
             .attr("r", 1.5)
             .attr("fill", "#ff3e3e")
             .attr("stroke", "#0a0f19")
@@ -176,8 +179,8 @@ export function WinterIntensity({ data }: Props) {
             .attr("d", d3.line<WeatherRecord>().x(d => brushXScale(d.Date)).y(d => brushYScale(d.Snow || 0)).curve(d3.curveLinear));
 
         gBrush.call(brush);
-        // @ts-ignore - D3 brush types are notoriously difficult in strict mode
-        gBrush.call(brush.move, xFull.range());
+        const initialRange = xFull.range() as [number, number];
+        gBrush.call(brush.move as (selection: d3.Selection<SVGGElement, unknown, null, undefined>, extent: [number, number]) => void, initialRange);
 
         // Labels
         g.append("text").attr("x", 0).attr("y", -10).text("❄️ Historical Snow Accumulation (Inches)").style("fill", "white").style("font-size", "0.75rem").style("font-weight", "bold");
