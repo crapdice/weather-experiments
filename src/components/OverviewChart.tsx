@@ -4,12 +4,15 @@ import React, { useRef } from 'react';
 import { OverviewChartProps } from './OverviewChart/types';
 import { ChartControls } from './OverviewChart/ChartControls';
 import { D3Chart } from './OverviewChart/D3Chart';
+import { SMAControls } from './OverviewChart/SMAControls';
 import { useOverviewChartState } from './OverviewChart/useOverviewChartState';
 import { useDimensions } from '@/hooks/useDimensions';
+import { useAdmin } from '@/context/AdminContext';
 
 export function OverviewChart({ data }: OverviewChartProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const dimensions = useDimensions(containerRef);
+    const { isAdmin } = useAdmin();
     const {
         dateRange,
         setDateRange,
@@ -21,6 +24,8 @@ export function OverviewChart({ data }: OverviewChartProps) {
         setShowRain,
         showSnow,
         setShowSnow,
+        smaWindow,
+        setSmaWindow,
         handleTimeframeChange
     } = useOverviewChartState(data);
 
@@ -46,9 +51,17 @@ export function OverviewChart({ data }: OverviewChartProps) {
                 trendLine={trendLine}
                 showRain={showRain}
                 showSnow={showSnow}
+                smaWindow={smaWindow}
                 setDateRange={setDateRange}
                 setTrendLine={setTrendLine}
             />
+
+            {isAdmin && (
+                <SMAControls
+                    smaWindow={smaWindow}
+                    setSmaWindow={setSmaWindow}
+                />
+            )}
 
             <style jsx>{`
                 .overview-container {

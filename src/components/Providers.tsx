@@ -1,11 +1,14 @@
 "use client";
 
 import { ThemeProvider } from "@/context/ThemeContext";
+import { AdminProvider } from "@/context/AdminContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
-        <ThemeProvider>
-            {children}
-        </ThemeProvider>
+        <AdminProvider>
+            <ThemeProvider>
+                {children}
+            </ThemeProvider>
+        </AdminProvider>
     );
 }

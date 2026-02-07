@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import { Activity, ArrowLeftRight, FlaskConical, RefreshCw } from 'lucide-react';
+import { useAdmin } from '@/context/AdminContext';
+import { Activity, ArrowLeftRight, FlaskConical, RefreshCw, Lock, Key } from 'lucide-react';
 
 import { CITIES, CityConfig } from '@/utils/cityConfig';
 
@@ -20,6 +21,19 @@ interface SidebarProps {
 
 export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, isRefreshing, onRefresh, selectedCity, onCityChange }: SidebarProps) {
   const { theme, setTheme } = useTheme();
+  const { isAdmin, login, logout } = useAdmin();
+
+  const handleAdminAuth = async () => {
+    if (isAdmin) {
+      if (confirm('Logout of Admin session?')) await logout();
+    } else {
+      const pass = prompt('Enter Admin Passphrase:');
+      if (pass) {
+        const success = await login(pass);
+        if (!success) alert('Invalid Passphrase');
+      }
+    }
+  };
 
   const themes = [
     { id: 'cyber-ice', name: 'Cyber-Ice' },
@@ -112,10 +126,17 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, i
         </div>
       </div>
 
+      <div className="sidebar-section admin-gate">
+        <button className="admin-btn" onClick={handleAdminAuth}>
+          {isAdmin ? <><Lock size={14} /> Admin Active</> : <><Key size={14} /> Admin Access</>}
+        </button>
+      </div>
+
       <style jsx>{`
         .sidebar {
           width: 280px;
-          height: calc(100vh - 40px);
+          min-height: calc(100vh - 40px);
+          height: fit-content;
           margin: 20px;
           padding: 24px;
           display: flex;
@@ -123,6 +144,12 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, i
           gap: 32px;
           position: sticky;
           top: 20px;
+          overflow-y: auto;
+          scrollbar-width: none;
+        }
+
+        .sidebar::-webkit-scrollbar {
+          display: none;
         }
 
         .sidebar-header h1 {
@@ -250,6 +277,33 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, i
         input[type="radio"]:checked + .radio-label {
           color: var(--accent-1);
           font-weight: bold;
+        }
+
+        .admin-gate {
+          margin-top: auto;
+          padding-top: 20px;
+          border-top: 1px solid var(--border-subtle);
+        }
+        .admin-btn {
+          background: transparent;
+          border: 1px solid var(--border-subtle);
+          color: var(--text-secondary);
+          padding: 10px;
+          width: 100%;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .admin-btn:hover {
+          background: rgba(255, 255, 255, 0.05);
+          border-color: var(--accent-1);
+          color: var(--accent-1);
         }
 
         @media (max-width: 1024px) {

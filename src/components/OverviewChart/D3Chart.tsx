@@ -14,6 +14,7 @@ interface D3ChartProps {
     trendLine: TrendLine | null;
     showRain: boolean;
     showSnow: boolean;
+    smaWindow: number;
     setDateRange: (range: [Date, Date]) => void;
     setTrendLine: (line: TrendLine | null) => void;
 }
@@ -26,6 +27,7 @@ export function D3Chart({
     trendLine,
     showRain,
     showSnow,
+    smaWindow,
     setDateRange,
     setTrendLine
 }: D3ChartProps) {
@@ -73,7 +75,34 @@ export function D3Chart({
             .domain(dateRange)
             .range([0, width]);
 
-        const filteredData = data.filter(d => d.Date >= dateRange[0] && d.Date <= dateRange[1]);
+        // --- High-Precision Prefix Sum SMA Calculation ---
+        // 1. Calculate cumulative sum of valid temperatures for O(1) interval averages
+        // We use a separate array to avoid mutating the original data prop
+        const cumulativeSum = new Float64Array(data.length + 1);
+        cumulativeSum[0] = 0;
+
+        for (let i = 0; i < data.length; i++) {
+            const val = getAvgTemp(data[i]);
+            // Sanity check: ensure we use 0 for NaN/Invalid but don't poison the sum
+            const safeVal = (isNaN(val) || val === null) ? 0 : val;
+            cumulativeSum[i + 1] = cumulativeSum[i] + safeVal;
+        }
+
+        // 2. Map SMA values to a local rendering dataset to avoid mutating props
+        const plotData = data.map((d, i) => {
+            let smaValue: number | undefined = undefined;
+            if (i >= smaWindow - 1) {
+                // Arithmetic Mean: (Sum of window) / Count
+                const windowSum = cumulativeSum[i + 1] - cumulativeSum[i + 1 - smaWindow];
+                smaValue = windowSum / smaWindow;
+            }
+            return {
+                ...d,
+                dynamicSma: smaValue
+            };
+        });
+
+        const filteredData = plotData.filter(d => d.Date >= dateRange[0] && d.Date <= dateRange[1]);
 
         const y1 = d3.scaleLinear()
             .domain([
@@ -84,8 +113,8 @@ export function D3Chart({
 
         const y2 = d3.scaleLinear()
             .domain([
-                d3.min(filteredData, d => d.SMA7 || 0)! - 2,
-                d3.max(filteredData, d => d.SMA7 || 0)! + 2
+                d3.min(filteredData, d => d.dynamicSma ?? Infinity)! - 2,
+                d3.max(filteredData, d => d.dynamicSma ?? -Infinity)! + 2
             ])
             .range([h2, 0]);
 
@@ -178,15 +207,15 @@ export function D3Chart({
             g1.selectAll(".snow-bar").data(filteredData.filter(d => getSnowfall(d) > 0)).enter().append("rect").attr("class", "snow-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => ySnow(getSnowfall(d))).attr("width", barWidth).attr("height", d => h1 - ySnow(getSnowfall(d))).attr("fill", "#ffffff").attr("opacity", 0.2).attr("pointer-events", "none");
         }
 
-        const area = d3.area<WeatherRecord>().x(d => x(d.Date)).y0(d => y1(d.MeanLow || 0)).y1(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
-        g1.append("path").datum(data).attr("fill", "var(--text-primary)").attr("opacity", 0.05).attr("d", area).attr("clip-path", "url(#clip-main)");
+        const area = d3.area<any>().x(d => x(d.Date)).y0(d => y1(d.MeanLow || 0)).y1(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
+        g1.append("path").datum(plotData).attr("fill", "var(--text-primary)").attr("opacity", 0.05).attr("d", area).attr("clip-path", "url(#clip-main)");
 
-        const lineHigh = d3.line<WeatherRecord>().x(d => x(d.Date)).y(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
-        const lineLow = d3.line<WeatherRecord>().x(d => x(d.Date)).y(d => y1(d.MeanLow || 0)).curve(d3.curveMonotoneX);
-        g1.append("path").datum(data).attr("fill", "none").attr("stroke", "#800000").attr("stroke-width", 1).attr("opacity", 0.3).attr("d", lineHigh).attr("clip-path", "url(#clip-main)");
-        g1.append("path").datum(data).attr("fill", "none").attr("stroke", "#000080").attr("stroke-width", 1).attr("opacity", 0.3).attr("d", lineLow).attr("clip-path", "url(#clip-main)");
+        const lineHigh = d3.line<any>().x(d => x(d.Date)).y(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
+        const lineLow = d3.line<any>().x(d => x(d.Date)).y(d => y1(d.MeanLow || 0)).curve(d3.curveMonotoneX);
+        g1.append("path").datum(plotData).attr("fill", "none").attr("stroke", "#800000").attr("stroke-width", 1).attr("opacity", 0.3).attr("d", lineHigh).attr("clip-path", "url(#clip-main)");
+        g1.append("path").datum(plotData).attr("fill", "none").attr("stroke", "#000080").attr("stroke-width", 1).attr("opacity", 0.3).attr("d", lineLow).attr("clip-path", "url(#clip-main)");
 
-        const lineMean = d3.line<WeatherRecord>().x(d => x(d.Date)).y(d => y1(getAvgTemp(d))).curve(d3.curveMonotoneX);
+        const lineMean = d3.line<any>().x(d => x(d.Date)).y(d => y1(getAvgTemp(d))).curve(d3.curveMonotoneX);
         g1.append("path").datum(filteredData).attr("fill", "none").attr("stroke", "var(--text-secondary)").attr("stroke-width", 1).attr("opacity", 0.4).attr("d", lineMean);
 
         // --- PLOT 2 ---
@@ -229,11 +258,11 @@ export function D3Chart({
         g2.append("path").datum(filteredData.filter(d => d.ROC1y !== undefined)).attr("fill", "none").attr("stroke", "var(--ro-line)").attr("stroke-width", 1.5).attr("d", lineROC);
 
         // --- PLOT 3 ---
-        g3.append("text").attr("x", 0).attr("y", -10).text("7 Day Average Temperature").style("fill", "var(--trend-line)").style("font-size", "0.8rem").style("font-weight", "bold");
+        g3.append("text").attr("x", 0).attr("y", -10).text(`${smaWindow} Day Average Temperature`).style("fill", "var(--trend-line)").style("font-size", "0.8rem").style("font-weight", "bold");
         g3.append("g").attr("transform", `translate(0,${h3})`).call(d3.axisBottom(x).ticks(width / 100)).attr("color", "var(--text-secondary)");
         g3.append("g").call(d3.axisLeft(y2).ticks(5)).attr("color", "var(--text-secondary)");
-        const lineSMA = d3.line<WeatherRecord>().x(d => x(d.Date)).y(d => y2(d.SMA7 || 0)).curve(d3.curveMonotoneX);
-        g3.append("path").datum(filteredData.filter(d => d.SMA7 !== undefined)).attr("fill", "none").attr("stroke", "var(--trend-line)").attr("stroke-width", 2).attr("d", lineSMA);
+        const lineSMA = d3.line<any>().x(d => x(d.Date)).y(d => y2(d.dynamicSma || 0)).curve(d3.curveMonotoneX);
+        g3.append("path").datum(filteredData.filter(d => d.dynamicSma !== undefined)).attr("fill", "none").attr("stroke", "var(--trend-line)").attr("stroke-width", 2).attr("d", lineSMA);
 
         // Tooltips & Interactivity
         const tooltip = d3.select("body").append("div").attr("class", "chart-tooltip").style("opacity", 0);
@@ -257,8 +286,8 @@ export function D3Chart({
                         <span style="font-weight: bold;">${getAvgTemp(d).toFixed(1)}°F</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 2px; color: var(--trend-line)">
-                        <span>7d SMA:</span> 
-                        <span style="font-weight: bold;">${d.SMA7?.toFixed(1) || 'N/A'}°F</span>
+                        <span>${smaWindow}d SMA:</span> 
+                        <span style="font-weight: bold;">${(d as any).dynamicSma?.toFixed(2) || 'N/A'}°F</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; gap: 20px; color: var(--ro-line)">
                         <span>YoY ROC:</span> 
@@ -307,7 +336,7 @@ export function D3Chart({
         }
 
         return () => { tooltip.remove(); };
-    }, [data, dateRange, dimensions.width, isDrawMode, trendLine, showRain, showSnow, setDateRange, setTrendLine]);
+    }, [data, dateRange, dimensions.width, isDrawMode, trendLine, showRain, showSnow, smaWindow, setDateRange, setTrendLine]);
 
     return (
         <div className="chart-container" style={{ width: '100%' }}>

@@ -21,6 +21,7 @@ export function useOverviewChartState(data: WeatherRecord[]) {
     const [trendLine, setTrendLine] = useState<TrendLine | null>(null);
     const [showRain, setShowRain] = useState(false);
     const [showSnow, setShowSnow] = useState(false);
+    const [smaWindow, setSmaWindow] = useState(7);
 
     const handleTimeframeChange = useCallback((tf: Timeframe) => {
         if (!data.length) return;
@@ -54,6 +55,8 @@ export function useOverviewChartState(data: WeatherRecord[]) {
         setShowRain,
         showSnow,
         setShowSnow,
+        smaWindow,
+        setSmaWindow,
         handleTimeframeChange
     };
 }

@@ -23,46 +23,54 @@ export function ChartControls({
     onTimeframeChange
 }: ChartControlsProps) {
     return (
-        <div className="timeframe-buttons">
-            {TIMEFRAMES.map(tf => (
+        <div className="controls-root">
+            <div className="timeframe-buttons">
+                {TIMEFRAMES.map(tf => (
+                    <button
+                        key={tf.label}
+                        onClick={() => onTimeframeChange(tf)}
+                        className="time-btn glass-panel"
+                    >
+                        {tf.label}
+                    </button>
+                ))}
                 <button
-                    key={tf.label}
-                    onClick={() => onTimeframeChange(tf)}
-                    className="time-btn glass-panel"
+                    className={`time-btn glass-panel ${isDrawMode ? 'active-draw' : ''}`}
+                    onClick={() => setIsDrawMode(!isDrawMode)}
+                    style={{ marginLeft: '12px', borderColor: isDrawMode ? 'var(--trend-line)' : '' }}
                 >
-                    {tf.label}
+                    {isDrawMode ? 'Exit Draw Mode' : '✎ Draw Trend'}
                 </button>
-            ))}
-            <button
-                className={`time-btn glass-panel ${isDrawMode ? 'active-draw' : ''}`}
-                onClick={() => setIsDrawMode(!isDrawMode)}
-                style={{ marginLeft: '12px', borderColor: isDrawMode ? 'var(--trend-line)' : '' }}
-            >
-                {isDrawMode ? 'Exit Draw Mode' : '✎ Draw Trend'}
-            </button>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                <button
-                    className={`time-btn glass-panel ${showRain ? 'active-precip' : ''}`}
-                    onClick={() => setShowRain(!showRain)}
-                    style={{ borderColor: showRain ? '#00d2ff' : '' }}
-                >
-                    💧 Rain
-                </button>
-                <button
-                    className={`time-btn glass-panel ${showSnow ? 'active-precip' : ''}`}
-                    onClick={() => setShowSnow(!showSnow)}
-                    style={{ borderColor: showSnow ? '#ffffff' : '' }}
-                >
-                    ❄️ Snow
-                </button>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                    <button
+                        className={`time-btn glass-panel ${showRain ? 'active-precip' : ''}`}
+                        onClick={() => setShowRain(!showRain)}
+                        style={{ borderColor: showRain ? '#00d2ff' : '' }}
+                    >
+                        💧 Rain
+                    </button>
+                    <button
+                        className={`time-btn glass-panel ${showSnow ? 'active-precip' : ''}`}
+                        onClick={() => setShowSnow(!showSnow)}
+                        style={{ borderColor: showSnow ? '#ffffff' : '' }}
+                    >
+                        ❄️ Snow
+                    </button>
+                </div>
             </div>
 
+
             <style jsx>{`
+                .controls-root {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    margin-bottom: 20px;
+                }
                 .timeframe-buttons {
                     display: flex;
                     justify-content: flex-start;
                     gap: 8px;
-                    margin-bottom: 10px;
                     overflow-x: auto;
                     white-space: nowrap;
                     padding: 4px 0;
