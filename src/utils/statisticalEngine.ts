@@ -1,7 +1,7 @@
 import { WeatherRecord, ClimateStats } from '@/types/weather';
 import * as d3 from 'd3';
 import { getSeasonDayIndex } from './seasonRegistry';
-import { getDayOfYear, formatISODate } from './dateUtils';
+import { getDayOfYear, formatDateKey } from './dateUtils';
 
 
 
@@ -80,11 +80,11 @@ export function findLastSimilarDate(data: WeatherRecord[], todayMax?: number, to
     // Search backwards skipping the very last record if it matches today (to find the *previous* time)
     // Assuming data is sorted by date.
     // If date is today, skip it.
-    const todayStr = formatISODate(new Date());
+    const todayStr = formatDateKey(new Date());
 
     for (let i = data.length - 1; i >= 0; i--) {
         const d = data[i];
-        if (formatISODate(d.Date) === todayStr) continue;
+        if (formatDateKey(d.Date) === todayStr) continue;
 
 
         if (isCold) {

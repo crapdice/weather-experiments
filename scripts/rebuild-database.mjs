@@ -1,20 +1,41 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const CSV_PATH = path.join(process.cwd(), 'public/data/chicago_weather_v86.csv');
-const LAT = 41.9742;
-const LON = -87.9073;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT = path.join(__dirname, '..');
+
+// Helper to extract city config from TS file without a heavy loader
+function getCities() {
+    const configPath = path.join(ROOT, 'src/utils/cityConfig.ts');
+    const content = fs.readFileSync(configPath, 'utf8');
+    const regex = /id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?file:\s*'([^']+)'[\s\S]*?lat:\s*([\d.-]+)[\s\S]*?lng:\s*([\d.-]+)/g;
+    return [...content.matchAll(regex)].map(m => ({
+        id: m[1],
+        name: m[2],
+        file: m[3],
+        lat: parseFloat(m[4]),
+        lng: parseFloat(m[5])
+    }));
+}
+
 const START_DATE = '1940-01-01';
 
-async function rebuild() {
-    console.log('--- Starting ARCHIVAL REBUILD (1940 - Present) ---');
-    console.log('Target:', CSV_PATH);
+async function rebuildCity(city) {
+    // Standardize file path
+    const relativeFile = city.file.startsWith('/') ? city.file.slice(1) : city.file;
+    const csvPath = path.join(ROOT, 'public', relativeFile);
+
+    console.log(`\n--------------------------------------------------`);
+    console.log(`ARCHIVAL REBUILD: ${city.name} (${city.id})`);
+    console.log(`Target: ${csvPath}`);
+    console.log(`Coords: ${city.lat}, ${city.lng}`);
 
     const endDate = new Date();
-    endDate.setDate(endDate.getDate() - 2); // 2 days buffer for reliability
+    endDate.setDate(endDate.getDate() - 5); // 5 days buffer for definitive archival data
     const endDateStr = endDate.toISOString().split('T')[0];
 
-    console.log(`Region: Chicago (${LAT}, ${LON})`);
     console.log(`Timeline: ${START_DATE} to ${endDateStr}`);
 
     const variables = [
@@ -27,7 +48,7 @@ async function rebuild() {
         'wind_gusts_10m_max'
     ].join(',');
 
-    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}&start_date=${START_DATE}&end_date=${endDateStr}&daily=${variables}&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FChicago`;
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${city.lat}&longitude=${city.lng}&start_date=${START_DATE}&end_date=${endDateStr}&daily=${variables}&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`;
 
     console.log('Requesting massive dataset from Open-Meteo...');
 
@@ -45,7 +66,7 @@ async function rebuild() {
             throw new Error('No data returned from API');
         }
 
-        console.log(`Fetched ${daily.time.length} records.`);
+        console.log(`Received ${daily.time.length.toLocaleString()} records.`);
 
         const header = 'Date,Max Temp (°F),Min Temp (°F),Avg Temp (°F),Precipitation (in),Snowfall (in),Max Wind Speed (mph),Max Wind Gust (mph)';
         const rows = [header];
@@ -60,18 +81,38 @@ async function rebuild() {
             const wind = daily.wind_speed_10m_max[i] ?? '';
             const gust = daily.wind_gusts_10m_max[i] ?? '';
 
-            // Formatting date to match ISO 8601: YYYY-MM-DD
+            // Formatting: Removing nulls, keeping 0s
             rows.push(`${date},${maxTemp},${minTemp},${avgTemp},${precip},${snow},${wind},${gust}`);
         }
 
-        fs.writeFileSync(CSV_PATH, rows.join('\n'));
-        console.log(`Successfully wrote ${rows.length - 1} records to ${CSV_PATH}`);
-        console.log('--- Archival Rebuild Complete ---');
+        fs.writeFileSync(csvPath, rows.join('\n'));
+        console.log(`✅ SUCCESS: Wrote ${rows.length - 1} records to disk.`);
 
     } catch (error) {
-        console.error('Rebuild failed:', error);
-        process.exit(1);
+        console.error(`❌ FAILED to rebuild ${city.name}:`, error.message);
     }
 }
 
-rebuild();
+async function main() {
+    console.log('--- GLOBAL HISTORY BACKFILL INITIATED ---');
+    const cities = getCities();
+
+    for (const city of cities) {
+        // We skip Chicago (KORD) in this script because we want to preserve 
+        // the high-fidelity NWS/ACIS data we already have for it.
+        // If you want to nuke Chicago and use Open-Meteo only, remove this check.
+        if (city.id === 'CHI') {
+            console.log(`\nSkipping Chicago (KORD) to preserve Hybrid/NWS dataset.`);
+            continue;
+        }
+
+        await rebuildCity(city);
+        // Generous delay to absolutely ensure we don't hit the 429 rate limit again
+        // Open-Meteo free tier is generous but we are pulling 80 years of data per call.
+        console.log('Waiting 90s for API cooldown...');
+        await new Promise(resolve => setTimeout(resolve, 90000));
+    }
+    console.log('\n--- GLOBAL BACKFILL COMPLETE ---');
+}
+
+main();

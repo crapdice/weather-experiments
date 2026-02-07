@@ -1,37 +1,70 @@
 /**
- * Utility for date-related calculations throughout the app.
- * Ensuring leap-year consistency is a primary goal.
+ * Validates if a given year is a leap year.
+ * Rule: Divisible by 4, unless divisible by 100 but not 400.
  */
+export function isLeapYear(year: number): boolean {
+    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+}
 
 /**
- * Returns a consistent Day of Year (1-366).
- * Uses a reference leap year (2000) so that specific calendar days (like March 1st) 
- * always have the same index (61) regardless of whether the current year is a leap year.
+ * Returns the Day of Year (1-366).
+ * Example: Jan 1 = 1, Feb 29 (Leap) = 60.
  */
 export function getDayOfYear(date: Date): number {
-    const refDate = new Date(2000, date.getMonth(), date.getDate());
-    const start = new Date(2000, 0, 0);
-    const diff = (refDate.getTime() - start.getTime()) + ((start.getTimezoneOffset() - refDate.getTimezoneOffset()) * 60 * 1000);
+    const start = new Date(date.getFullYear(), 0, 0);
+    const diff = date.getTime() - start.getTime();
     const oneDay = 1000 * 60 * 60 * 24;
     return Math.floor(diff / oneDay);
 }
 
 /**
- * Formats a date to YYYY-MM-DD string.
+ * Gets the climatologically aligned date for comparative analysis.
+ * 
+ * Strategy: Day-of-Year Alignment (Meteorological Standard)
+ * - We compare the Nth day of this year to the Nth day of previous years.
+ * - This ensures seasons align perfectly.
+ * 
+ * Edge Case:
+ * - If today is Feb 29 (Day 60) and we look back to a non-leap year:
+ *   - We fall back to Feb 28 (Day 59) to ensure continuous data.
+ * - If today is Feb 28 (Day 59) and we look back to a leap year:
+ *   - We map to Feb 28 (Day 59).
+ *   - Note: In a leap year, Day 60 is Feb 29.
  */
-export function formatISODate(date: Date): string {
-    return date.toISOString().split('T')[0];
+export function getComparisonDate(date: Date, yearsBack: number): Date {
+    const currentYear = date.getFullYear();
+    const targetYear = currentYear - yearsBack;
+
+    // 1. Get current DOY (e.g., 60 for Feb 29)
+    let doy = getDayOfYear(date);
+
+    // 2. Handle Non-Leap -> Leap alignment
+    // If we are past Feb 28 in a non-leap year, we are "late" by 1 day relative to a leap year
+    // e.g. Mar 1 (Non-Leap) is Day 60. Mar 1 (Leap) is Day 61.
+    // To align properly, we match Month/Day for simplicity in non-leap contexts, but DOY for science.
+
+    // SIMPLIFIED STRATEGY for robust coding:
+    // Match Month and Date. 
+    // If Feb 29 and target is non-leap, use Feb 28.
+
+    const targetDate = new Date(targetYear, date.getMonth(), date.getDate());
+
+    // Check if we rolled over (e.g. Feb 29 -> Mar 1 in non-leap)
+    if (targetDate.getMonth() !== date.getMonth()) {
+        // This means we tried Feb 29 but got Mar 1.
+        // Fallback to Feb 28 (End of Month alignment)
+        targetDate.setDate(0);
+    }
+
+    return targetDate;
 }
 
 /**
- * Internal helper to map a date to a leap-year-safe reference season window.
- * Default is July 1999 to June 2000.
+ * Formats a date as YYYY-MM-DD for Map lookups.
  */
-export function getLeapSafeSeasonDate(date: Date, startMonth: number): Date {
-    const m = date.getMonth();
-    const d = date.getDate();
-    // If month is >= startMonth (e.g. July), it's the first half of the season.
-    // Map to 1999 so that Feb 29 (which will land in 2000) is included.
-    const refYear = m >= startMonth ? 1999 : 2000;
-    return new Date(refYear, m, d);
+export function formatDateKey(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

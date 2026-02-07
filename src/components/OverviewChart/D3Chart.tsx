@@ -5,6 +5,7 @@ import * as d3 from 'd3';
 import { WeatherRecord } from '@/types/weather';
 import { TrendLine } from './types';
 import { getAvgTemp, getMaxTemp, getMinTemp, getPrecipitation, getSnowfall } from '@/utils/weatherAccessors';
+import { getComparisonDate, formatDateKey } from '@/utils/dateUtils';
 
 interface D3ChartProps {
     data: WeatherRecord[];
@@ -102,35 +103,38 @@ export function D3Chart({
             };
         });
 
-        const filteredData = plotData.filter(d => d.Date >= dateRange[0] && d.Date <= dateRange[1]);
+        // 3. Pre-calculate YoY Rate of Change (ROC1y) using robust date util
+
+        const viewData = plotData.filter(d => d.Date >= dateRange[0] && d.Date <= dateRange[1]);
+
 
         const y1 = d3.scaleLinear()
             .domain([
-                d3.min(filteredData, getMinTemp)! - 5,
-                d3.max(filteredData, getMaxTemp)! + 5
+                d3.min(viewData, getMinTemp)! - 5,
+                d3.max(viewData, getMaxTemp)! + 5
             ])
             .range([h1, 0]);
 
         const y2 = d3.scaleLinear()
             .domain([
-                d3.min(filteredData, d => d.dynamicSma ?? Infinity)! - 2,
-                d3.max(filteredData, d => d.dynamicSma ?? -Infinity)! + 2
+                d3.min(viewData, d => d.dynamicSma ?? Infinity)! - 2,
+                d3.max(viewData, d => d.dynamicSma ?? -Infinity)! + 2
             ])
             .range([h2, 0]);
 
         const y3 = d3.scaleLinear()
             .domain([
-                d3.min(filteredData, d => d.ROC1y || 0)! - 2,
-                d3.max(filteredData, d => d.ROC1y || 0)! + 2
+                d3.min(viewData, d => d.ROC1y || 0)! - 2,
+                d3.max(viewData, d => d.ROC1y || 0)! + 2
             ])
             .range([h3, 0]);
 
         const yRain = d3.scaleLinear()
-            .domain([0, d3.max(filteredData, getPrecipitation)! || 1])
+            .domain([0, d3.max(viewData, getPrecipitation)! || 1])
             .range([h1, 0]);
 
         const ySnow = d3.scaleLinear()
-            .domain([0, d3.max(filteredData, getSnowfall)! || 1])
+            .domain([0, d3.max(viewData, getSnowfall)! || 1])
             .range([h1, 0]);
 
         // --- SUBPLOTS ---
@@ -199,12 +203,12 @@ export function D3Chart({
         g1.append("g").call(d3.axisLeft(y1)).attr("color", "var(--text-secondary)");
 
         if (showRain) {
-            const barWidth = Math.max(2, width / filteredData.length);
-            g1.selectAll(".rain-bar").data(filteredData.filter(d => getPrecipitation(d) > 0)).enter().append("rect").attr("class", "rain-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => yRain(getPrecipitation(d))).attr("width", barWidth).attr("height", d => h1 - yRain(getPrecipitation(d))).attr("fill", "#00d2ff").attr("opacity", 0.15).attr("pointer-events", "none");
+            const barWidth = Math.max(2, width / viewData.length);
+            g1.selectAll(".rain-bar").data(viewData.filter(d => getPrecipitation(d) > 0)).enter().append("rect").attr("class", "rain-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => yRain(getPrecipitation(d))).attr("width", barWidth).attr("height", d => h1 - yRain(getPrecipitation(d))).attr("fill", "#00d2ff").attr("opacity", 0.15).attr("pointer-events", "none");
         }
         if (showSnow) {
-            const barWidth = Math.max(2, width / filteredData.length);
-            g1.selectAll(".snow-bar").data(filteredData.filter(d => getSnowfall(d) > 0)).enter().append("rect").attr("class", "snow-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => ySnow(getSnowfall(d))).attr("width", barWidth).attr("height", d => h1 - ySnow(getSnowfall(d))).attr("fill", "#ffffff").attr("opacity", 0.2).attr("pointer-events", "none");
+            const barWidth = Math.max(2, width / viewData.length);
+            g1.selectAll(".snow-bar").data(viewData.filter(d => getSnowfall(d) > 0)).enter().append("rect").attr("class", "snow-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => ySnow(getSnowfall(d))).attr("width", barWidth).attr("height", d => h1 - ySnow(getSnowfall(d))).attr("fill", "#ffffff").attr("opacity", 0.2).attr("pointer-events", "none");
         }
 
         const area = d3.area<any>().x(d => x(d.Date)).y0(d => y1(d.MeanLow || 0)).y1(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
@@ -216,53 +220,50 @@ export function D3Chart({
         g1.append("path").datum(plotData).attr("fill", "none").attr("stroke", "#000080").attr("stroke-width", 1).attr("opacity", 0.3).attr("d", lineLow).attr("clip-path", "url(#clip-main)");
 
         const lineMean = d3.line<any>().x(d => x(d.Date)).y(d => y1(getAvgTemp(d))).curve(d3.curveMonotoneX);
-        g1.append("path").datum(filteredData).attr("fill", "none").attr("stroke", "var(--text-secondary)").attr("stroke-width", 1).attr("opacity", 0.4).attr("d", lineMean);
+        g1.append("path").datum(viewData).attr("fill", "none").attr("stroke", "var(--text-secondary)").attr("stroke-width", 1).attr("opacity", 0.4).attr("d", lineMean);
 
         // --- PLOT 2 ---
         g2.append("text").attr("x", 0).attr("y", -10).text("Compared To Last Year").style("fill", "var(--ro-line)").style("font-size", "0.8rem").style("font-weight", "bold");
 
-        // Calculate Streak for the latest data point
-        let streakCount = 0;
-        let streakType: 'above' | 'below' | null = null;
-        for (let i = data.length - 1; i >= 0; i--) {
-            if (data[i].ROC1y === undefined) continue;
-            const currentType = data[i].ROC1y! >= 0 ? 'above' : 'below';
-            if (streakType === null) {
-                streakType = currentType;
-                streakCount = 1;
-            } else if (streakType === currentType) {
-                streakCount++;
-            } else {
-                break;
-            }
-        }
+        // Calculate Cumulative Thermal Anomaly for the CURRENT VIEW
+        let cumulativeAnomaly = 0;
+        let validDays = 0;
 
-        if (streakCount >= 3) {
-            g2.append("text")
-                .attr("x", width)
-                .attr("y", -10)
-                .attr("text-anchor", "end")
-                .text(`${streakCount} DAY STREAK ${streakType?.toUpperCase()}`)
-                .style("fill", streakType === 'above' ? "#ff4b2b" : "#00d2ff")
-                .style("font-size", "0.7rem")
-                .style("font-weight", "800")
-                .style("letter-spacing", "0.05em");
-        }
+        viewData.forEach(d => {
+            if (d.ROC1y !== undefined && d.ROC1y !== null) {
+                cumulativeAnomaly += d.ROC1y;
+                validDays++;
+            }
+        });
+
+        const avgAnomaly = validDays > 0 ? cumulativeAnomaly / validDays : 0;
+        const anomalySign = avgAnomaly >= 0 ? '+' : '';
+        const anomalyColor = avgAnomaly >= 0 ? '#ff4b2b' : '#00d2ff';
+
+        g2.append("text")
+            .attr("x", width)
+            .attr("y", -10)
+            .attr("text-anchor", "end")
+            .text(`AVG DAILY HEAT VS 1YR AGO: ${anomalySign}${avgAnomaly.toFixed(1)}°F`)
+            .style("fill", anomalyColor)
+            .style("font-size", "0.75rem")
+            .style("font-weight", "800")
+            .style("letter-spacing", "0.05em");
 
         g2.append("g").attr("transform", `translate(0,${h2})`).call(d3.axisBottom(x).ticks(width / 100).tickFormat(() => "")).attr("color", "var(--border-subtle)");
 
         g2.append("g").call(d3.axisLeft(y3).ticks(5)).attr("color", "var(--text-secondary)");
         const areaROC = d3.area<WeatherRecord>().x(d => x(d.Date)).y0(y3(0)).y1(d => y3(d.ROC1y || 0)).curve(d3.curveMonotoneX);
-        g2.append("path").datum(filteredData.filter(d => d.ROC1y !== undefined)).attr("fill", "var(--ro-line)").attr("opacity", 0.1).attr("d", areaROC);
+        g2.append("path").datum(viewData.filter(d => d.ROC1y !== undefined)).attr("fill", "var(--ro-line)").attr("opacity", 0.1).attr("d", areaROC);
         const lineROC = d3.line<WeatherRecord>().x(d => x(d.Date)).y(d => y3(d.ROC1y || 0)).curve(d3.curveMonotoneX);
-        g2.append("path").datum(filteredData.filter(d => d.ROC1y !== undefined)).attr("fill", "none").attr("stroke", "var(--ro-line)").attr("stroke-width", 1.5).attr("d", lineROC);
+        g2.append("path").datum(viewData.filter(d => d.ROC1y !== undefined)).attr("fill", "none").attr("stroke", "var(--ro-line)").attr("stroke-width", 1.5).attr("d", lineROC);
 
         // --- PLOT 3 ---
         g3.append("text").attr("x", 0).attr("y", -10).text(`${smaWindow} Day Average Temperature`).style("fill", "var(--trend-line)").style("font-size", "0.8rem").style("font-weight", "bold");
         g3.append("g").attr("transform", `translate(0,${h3})`).call(d3.axisBottom(x).ticks(width / 100)).attr("color", "var(--text-secondary)");
         g3.append("g").call(d3.axisLeft(y2).ticks(5)).attr("color", "var(--text-secondary)");
         const lineSMA = d3.line<any>().x(d => x(d.Date)).y(d => y2(d.dynamicSma || 0)).curve(d3.curveMonotoneX);
-        g3.append("path").datum(filteredData.filter(d => d.dynamicSma !== undefined)).attr("fill", "none").attr("stroke", "var(--trend-line)").attr("stroke-width", 2).attr("d", lineSMA);
+        g3.append("path").datum(viewData.filter(d => d.dynamicSma !== undefined)).attr("fill", "none").attr("stroke", "var(--trend-line)").attr("stroke-width", 2).attr("d", lineSMA);
 
         // Tooltips & Interactivity
         const tooltip = d3.select("body").append("div").attr("class", "chart-tooltip").style("opacity", 0);
@@ -273,8 +274,8 @@ export function D3Chart({
             if (isDrawMode) { tooltip.style("opacity", 0); hoverLine.style("opacity", 0); return; }
             const mouseX = d3.pointer(event)[0];
             const date = x.invert(mouseX);
-            const i = bisect(filteredData, date, 1);
-            const d = filteredData[i - 1];
+            const i = bisect(viewData, date, 1);
+            const d = viewData[i - 1];
             if (d) {
                 hoverLine.attr("x1", x(d.Date)).attr("x2", x(d.Date)).style("opacity", 0.5);
                 tooltip.style("opacity", 1).html(`

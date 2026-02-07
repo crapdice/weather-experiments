@@ -2,7 +2,7 @@ import * as d3 from 'd3';
 import SunCalc from 'suncalc';
 import { WeatherRecord, ClimateStats } from '@/types/weather';
 import { calculateStats } from './statisticalEngine';
-import { getDayOfYear, formatISODate } from './dateUtils';
+import { getDayOfYear, getComparisonDate, formatDateKey } from './dateUtils';
 
 
 
@@ -60,7 +60,7 @@ export function processAndEnrich(rawData: Record<string, unknown>[]): { data: We
     // --- Pre-process Date Map for fast YoY lookup ---
     const dateMap = new Map<string, WeatherRecord>();
     data.forEach(d => {
-        const key = formatISODate(d.Date);
+        const key = formatDateKey(d.Date as Date);
         dateMap.set(key, d);
     });
 
@@ -77,22 +77,16 @@ export function processAndEnrich(rawData: Record<string, unknown>[]): { data: We
             d.SMA7 = d3.mean(slice, r => r['Avg Temp (°F)']);
         }
 
-        // ROC 1y (Exact calendar day comparison)
-        const prevYear = d.Date.getFullYear() - 1;
-        const month = d.Date.getMonth();
-        const day = d.Date.getDate();
+        // ROC 1y (Robust Climatological Comparison)
+        // We use getComparisonDate to handle leap years correctly (e.g. Feb 29 -> Feb 28)
+        const prevYearDate = getComparisonDate(d.Date, 1);
+        const prevYearKey = formatDateKey(prevYearDate);
+        const prevYearRecord = dateMap.get(prevYearKey);
 
-        // Construct previous year date safely
-        const prevYearDate = new Date(prevYear, month, day);
-
-        // Verify we haven't rolled over (e.g., Feb 29 -> Mar 1 in non-leap year)
-        // For precision, we ONLY compare if it's the same calendar month and day.
-        if (prevYearDate.getMonth() === month && prevYearDate.getDate() === day) {
-            const prevYearKey = formatISODate(prevYearDate);
-            const prevYearRecord = dateMap.get(prevYearKey);
-            if (prevYearRecord) {
-                d.ROC1y = d['Avg Temp (°F)'] - prevYearRecord['Avg Temp (°F)'];
-            }
+        if (prevYearRecord && prevYearRecord['Avg Temp (°F)'] != null) {
+            d.ROC1y = d['Avg Temp (°F)'] - prevYearRecord['Avg Temp (°F)'];
+        } else {
+            d.ROC1y = undefined;
         }
 
 

@@ -7,7 +7,7 @@ import {
     SeasonType,
     SEASONS
 } from './seasonRegistry';
-import { formatISODate } from './dateUtils';
+import { getDayOfYear, formatDateKey } from './dateUtils';
 
 
 export function calculateSeasonalRank(
@@ -31,7 +31,7 @@ export function calculateSeasonalRank(
     // Deduplicate history and currentData by date
     const dateMap = new Map<string, WeatherRecord>();
     [...history, ...currentData].forEach(d => {
-        dateMap.set(formatISODate(d.Date), d);
+        dateMap.set(formatDateKey(d.Date), d);
     });
 
     const allData = Array.from(dateMap.values());
@@ -102,7 +102,7 @@ export function calculateSeasonalComparisons(
     // Deduplicate history and currentData by date
     const dateMap = new Map<string, WeatherRecord>();
     [...history, ...currentData].forEach(d => {
-        dateMap.set(formatISODate(d.Date), d);
+        dateMap.set(formatDateKey(d.Date), d);
     });
 
     const allData = Array.from(dateMap.values());
