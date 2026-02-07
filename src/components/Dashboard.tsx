@@ -15,8 +15,44 @@ import { DashboardHeader } from './Dashboard/DashboardHeader';
 import { SummaryMetrics } from './Dashboard/SummaryMetrics';
 import { LabContainer } from './Dashboard/LabContainer';
 
-export function Dashboard() {
-  const [selectedCity, setSelectedCity] = useState(CITIES[0]);
+import { useRouter } from 'next/navigation';
+
+interface DashboardProps {
+  initialCityId?: string;
+}
+
+export function Dashboard({ initialCityId }: DashboardProps) {
+  const router = useRouter();
+
+  React.useEffect(() => {
+    // Dynamically import the custom element only on the client
+    import("@/utils/UniversalFeedbackWidget");
+  }, []);
+
+  // Find initial city or default to CHI
+  const initialCity = initialCityId
+    ? CITIES.find(c => c.id === initialCityId)
+    : CITIES[0];
+
+  // We can just use the prop directly if we trust the router to remount us on navigation.
+  // However, for smooth transitions, let's keep local state synced.
+  const [selectedCity, setSelectedCity] = useState(initialCity || CITIES[0]);
+
+  // Sync state if prop changes (e.g. back button navigation)
+  React.useEffect(() => {
+    if (initialCityId) {
+      const found = CITIES.find(c => c.id === initialCityId);
+      if (found) setSelectedCity(found);
+    }
+  }, [initialCityId]);
+
+  const handleCityChange = (city: typeof CITIES[0]) => {
+    // Navigate to the new route.
+    // This will update the URL and trigger a re-render with new initialCityId
+    router.push(`/city/${city.id.toLowerCase()}`);
+    setSelectedCity(city); // Optimistic update
+  };
+
   const { data, stats, loading, refreshing, handleRefresh } = useWeather(selectedCity);
   const [view, setView] = useState('overview');
   const [labTab, setLabTab] = useState('stripes');
@@ -34,7 +70,7 @@ export function Dashboard() {
         isRefreshing={refreshing}
         onRefresh={handleRefresh}
         selectedCity={selectedCity}
-        onCityChange={setSelectedCity}
+        onCityChange={handleCityChange}
       />
 
       <MobileNav
