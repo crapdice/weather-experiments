@@ -164,7 +164,7 @@ export function D3Chart({
         const g3 = g.append("g").attr("class", "subplot-3").attr("transform", `translate(0, ${h1 + sliderHeight + h2 + verticalPadding * 2 + 10})`);
 
         // --- PLOT 1 ---
-        g1.append("text").attr("x", 0).attr("y", -10).text("Thermal Distribution Spectrum (Seasonal Normals)").style("fill", "var(--accent-1)").style("font-size", "0.9rem").style("font-weight", "bold");
+        g1.append("text").attr("x", 0).attr("y", -10).text("Typical Seasonal Temperatures").style("fill", "var(--accent-1)").style("font-size", "0.9rem").style("font-weight", "bold");
         g1.append("g").attr("transform", `translate(0,${h1})`).call(d3.axisBottom(x).ticks(width / 100)).attr("color", "var(--text-secondary)");
         g1.append("g").call(d3.axisLeft(y1)).attr("color", "var(--text-secondary)");
 
