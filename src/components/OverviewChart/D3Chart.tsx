@@ -236,17 +236,46 @@ export function D3Chart({
             }
         });
 
-        const avgAnomaly = validDays > 0 ? cumulativeAnomaly / validDays : 0;
-        const anomalySign = avgAnomaly >= 0 ? '+' : '';
-        const anomalyColor = avgAnomaly >= 0 ? '#ff4b2b' : '#00d2ff';
+        const daysInView = (dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24);
+        const isLongTerm = daysInView > (365 * 5); // 5 Years
+
+        let statsLabel = "";
+        let color = "#var(--text-primary)";
+
+        if (isLongTerm) {
+            // Linear Regression for Long-Term Trend
+            const n = viewData.length;
+            if (n > 1) {
+                const xSum = d3.sum(viewData, d => d.Date.getTime());
+                const ySum = d3.sum(viewData, d => getAvgTemp(d));
+                const xySum = d3.sum(viewData, d => d.Date.getTime() * getAvgTemp(d));
+                const xSqSum = d3.sum(viewData, d => d.Date.getTime() * d.Date.getTime());
+
+                const slope = (n * xySum - xSum * ySum) / (n * xSqSum - xSum * xSum);
+                const tempChangePerYear = slope * (1000 * 60 * 60 * 24 * 365.25);
+                const tempChangePerDecade = tempChangePerYear * 10;
+
+                const sign = tempChangePerDecade > 0 ? '+' : '';
+                statsLabel = `CLIMATE TREND: ${sign}${tempChangePerDecade.toFixed(2)}°F / DECADE`;
+                color = tempChangePerDecade > 0 ? '#ff4b2b' : '#00d2ff';
+            }
+        } else {
+            // Short-Term Anomaly
+            const avgAnomaly = validDays > 0 ? cumulativeAnomaly / validDays : 0;
+            const anomalySign = avgAnomaly >= 0 ? '+' : '';
+            const totalSign = cumulativeAnomaly >= 0 ? '+' : '';
+            // Use lighter colors for short term noise
+            color = avgAnomaly >= 0 ? '#ff9a9e' : '#89f7fe';
+            statsLabel = `AVG: ${anomalySign}${avgAnomaly.toFixed(1)}°F  |  CUM: ${totalSign}${cumulativeAnomaly.toFixed(0)}°F`;
+        }
 
         g2.append("text")
             .attr("x", width)
             .attr("y", -10)
             .attr("text-anchor", "end")
-            .text(`AVG DAILY HEAT VS 1YR AGO: ${anomalySign}${avgAnomaly.toFixed(1)}°F`)
-            .style("fill", anomalyColor)
-            .style("font-size", "0.75rem")
+            .text(statsLabel)
+            .style("fill", color)
+            .style("font-size", "0.65rem")
             .style("font-weight", "800")
             .style("letter-spacing", "0.05em");
 
