@@ -105,7 +105,7 @@ export function Dashboard({ initialCityId, initialStats, initialDataSummary }: D
         <div className="chart-area glass-panel">
           {view === 'overview' && data.length > 0 && <OverviewChart data={data} />}
           {view === 'comparison' && data.length > 0 && (
-            <ComparisonChart data={data} initialYear1={comparisonYear} />
+            <ComparisonChart data={data} initialYear2={comparisonYear} />
           )}
           {view === 'lab' && (
             <LabContainer labTab={labTab} setLabTab={setLabTab} data={data} stats={stats} />
