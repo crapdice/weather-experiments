@@ -77,5 +77,16 @@ export const CITIES: CityConfig[] = [
         lng: -82.4220,
         timezone: 'America/New_York',
         minSnowThreshold: 100.0 // Snow impossible
+    },
+    {
+        id: 'APT',
+        name: 'Aptos, CA',
+        file: '/api/secure-weather?cityId=APT',
+        title: 'Aptos Intelligence',
+        subtitle: "Climate Data for Aptos, CA",
+        lat: 36.9772,
+        lng: -121.9078,
+        timezone: 'America/Los_Angeles',
+        minSnowThreshold: 100.0 // Snow impossible
     }
 ];
