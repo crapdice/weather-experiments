@@ -9,6 +9,9 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" }
 export const metadata: Metadata = {
   title: "Chicago O'Hare Weather Intelligence",
   description: "High-fidelity climate data visualization for KORD (1940 - 2024)",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export const viewport: Viewport = {
