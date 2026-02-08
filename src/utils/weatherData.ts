@@ -10,7 +10,7 @@ import { finalizeResults } from './weatherProcessor';
 
 export async function loadWeatherData(url: string, city?: CityConfig): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
     const targetUrl = url.includes('chicago_weather_50years.csv') || url.includes('chicago_weather_enriched.csv')
-        ? '/data/chicago_weather_v86.csv'
+        ? '/chicago_weather_v86.csv'
         : url;
     const lat = city?.lat ?? 41.9742;
     const lng = city?.lng ?? -87.9073;

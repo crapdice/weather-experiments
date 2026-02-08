@@ -23,10 +23,10 @@ export async function GET(request: NextRequest) {
     // Map cityId to file path (simplified for now based on known locations)
     let filePath = '';
     if (cityId === 'CHI') {
-        filePath = path.join(process.cwd(), 'private_data', 'chicago_weather_v86.csv');
+        filePath = path.join(process.cwd(), 'public', 'chicago_weather_v86.csv');
     } else {
         // Fallback or other cities
-        filePath = path.join(process.cwd(), 'private_data', 'chicago_weather_v86.csv');
+        filePath = path.join(process.cwd(), 'public', 'chicago_weather_v86.csv');
     }
 
     try {

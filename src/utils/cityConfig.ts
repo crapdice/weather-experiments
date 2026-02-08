@@ -4,7 +4,7 @@ export const CITIES: CityConfig[] = [
     {
         id: 'CHI',
         name: 'Chicago',
-        file: '/api/secure-weather?cityId=CHI',
+        file: '/chicago_weather_v86.csv',
         title: 'KORD Intelligence',
         subtitle: "Climate Data for Chicago O'Hare",
         lat: 41.9742,

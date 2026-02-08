@@ -36,13 +36,31 @@ export function generateStaticParams() {
     }));
 }
 
+import { loadServerWeatherData } from '@/utils/serverWeatherData';
+
 export default async function CityPage({ params }: Props) {
     const resolvedParams = await Promise.resolve(params); // Future-proof
     const cityId = resolvedParams.id.toUpperCase();
+    const city = CITIES.find(c => c.id === cityId);
+
+    let initialData = { data: [], stats: null };
+
+    // Only attempt server load for static-optimized cities (CHI) or reliable APIs
+    if (city && city.id === 'CHI') {
+        try {
+            initialData = await loadServerWeatherData(city.id, city);
+        } catch (e) {
+            console.error("Failed to load server data for", cityId, e);
+        }
+    }
 
     return (
         <>
-            <Dashboard initialCityId={cityId} />
+            <Dashboard
+                initialCityId={cityId}
+                initialStats={initialData.stats}
+                initialDataSummary={initialData.data.slice(-7)} // Pass just a tiny bit for initial render if needed
+            />
             {React.createElement('kord-feedback-widget')}
         </>
     );

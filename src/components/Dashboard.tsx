@@ -17,11 +17,15 @@ import { LabContainer } from './Dashboard/LabContainer';
 
 import { useRouter } from 'next/navigation';
 
+import { ClimateStats, WeatherRecord } from '@/types/weather';
+
 interface DashboardProps {
   initialCityId?: string;
+  initialStats?: ClimateStats | null;
+  initialDataSummary?: WeatherRecord[];
 }
 
-export function Dashboard({ initialCityId }: DashboardProps) {
+export function Dashboard({ initialCityId, initialStats, initialDataSummary }: DashboardProps) {
   const router = useRouter();
 
   React.useEffect(() => {
@@ -53,7 +57,7 @@ export function Dashboard({ initialCityId }: DashboardProps) {
     setSelectedCity(city); // Optimistic update
   };
 
-  const { data, stats, loading, refreshing, handleRefresh } = useWeather(selectedCity);
+  const { data, stats, loading, refreshing, handleRefresh } = useWeather(selectedCity, initialStats, initialDataSummary);
   const [view, setView] = useState('overview');
   const [labTab, setLabTab] = useState('stripes');
 
