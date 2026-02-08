@@ -4,19 +4,32 @@ import { parse } from 'csv-parse/sync';
 import { processAndEnrich } from './dataProcessor';
 import { finalizeResults } from './weatherProcessor';
 import { fetchCurrentWeather } from '@/services/weatherFetcher';
-import { CityConfig } from '@/types/weather';
+import { CityConfig, WeatherRecord } from '@/types/weather';
 import { getAdminSettings } from './adminSettings';
+
+interface RawWeatherData {
+    Date: string | Date;
+    'Max Temp (°F)': number;
+    'Min Temp (°F)': number;
+    'Avg Temp (°F)': number;
+    'Precipitation (in)': number;
+    'Snowfall (in)': number;
+    'Max Wind Speed (mph)': number;
+    'Max Wind Gust (mph)': number;
+    DayOfYear?: number;
+    Year?: number;
+}
 
 export async function loadServerWeatherData(cityId: string, city: CityConfig) {
     if (cityId === 'CHI') {
         // Use static CSV optimization
         const filePath = path.join(process.cwd(), 'public', 'chicago_weather_v86.csv');
         const fileContent = await fs.readFile(filePath, 'utf-8');
-        let rawDataCSV = parse(fileContent, {
+        const rawDataCSV = parse(fileContent, {
             columns: true,
             skip_empty_lines: true,
             cast: true
-        });
+        }) as RawWeatherData[];
 
         const lat = city?.lat ?? 41.9742;
         const lng = city?.lng ?? -87.9073;
@@ -27,8 +40,8 @@ export async function loadServerWeatherData(cityId: string, city: CityConfig) {
         let mergedRawData = rawDataCSV;
 
         if (currentInfo && currentInfo.recentHistory) {
-            const dataMap = new Map();
-            rawDataCSV.forEach((d: any) => {
+            const dataMap = new Map<string, RawWeatherData>();
+            rawDataCSV.forEach((d: RawWeatherData) => {
                 const key = new Date(d.Date).toISOString().split('T')[0];
                 dataMap.set(key, d);
             });
@@ -51,10 +64,12 @@ export async function loadServerWeatherData(cityId: string, city: CityConfig) {
                     dataMap.set(key, csvRow);
                 }
             });
-            mergedRawData = Array.from(dataMap.values()).sort((a: any, b: any) => new Date(a.Date).getTime() - new Date(b.Date).getTime());
+            mergedRawData = Array.from(dataMap.values()).sort((a: RawWeatherData, b: RawWeatherData) =>
+                new Date(a.Date).getTime() - new Date(b.Date).getTime()
+            );
         }
 
-        const { data, stats } = processAndEnrich(mergedRawData);
+        const { data, stats } = processAndEnrich(mergedRawData as unknown as Record<string, unknown>[]);
         return finalizeResults(data, stats, currentInfo);
     }
 
