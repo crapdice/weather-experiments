@@ -75,8 +75,8 @@ function parseACISValue(val) {
 }
 
 async function syncCity(city) {
-    // Use private_data directory
-    const csvPath = path.join(ROOT, 'private_data', city.file);
+    // Use public directory for client access
+    const csvPath = path.join(ROOT, 'public', city.file);
 
     console.log(`\n[${city.id}] Syncing ${city.name}...`);
 
@@ -129,19 +129,27 @@ async function syncCity(city) {
     });
 
     if (omData && omData.time) {
+        console.log(`    Processing ${omData.time.length} records... Keys: ${Object.keys(omData).join(', ')}`);
         for (let i = 0; i < omData.time.length; i++) {
             const date = omData.time[i];
-            recordMap.set(date, [
+            const row = [
                 date,
-                omData.temperature_2m_max[i],
-                omData.temperature_2m_min[i],
-                omData.temperature_2m_mean[i],
-                omData.precipitation_sum[i] ?? 0,
-                omData.snowfall_sum[i] ?? 0,
-                omData.wind_speed_10m_max[i] ?? 0,
-                omData.wind_gusts_10m_max[i] ?? 0
-            ].map(v => v?.toString() || '0'));
+                omData.temperature_2m_max?.[i],
+                omData.temperature_2m_min?.[i],
+                omData.temperature_2m_mean?.[i],
+                omData.precipitation_sum?.[i] ?? 0,
+                omData.snowfall_sum?.[i] ?? 0,
+                omData.wind_speed_10m_max?.[i] ?? 0,
+                omData.wind_gusts_10m_max?.[i] ?? 0
+            ].map(v => v?.toString() || '0');
+
+            recordMap.set(date, row);
+
+            if (i % 5000 === 0) console.log(`      -> Processed ${i}: ${date} | Row len: ${row.length}`);
         }
+        console.log(`    Map size after loop: ${recordMap.size}`);
+    } else {
+        console.error('    ❌ omData.time missing!');
     }
 
     if (acisData) {

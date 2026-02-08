@@ -81,7 +81,7 @@ export const CITIES: CityConfig[] = [
     {
         id: 'APT',
         name: 'Aptos, CA',
-        file: '/api/secure-weather?cityId=APT',
+        file: '/aptos_weather.csv',
         title: 'Aptos Intelligence',
         subtitle: "Climate Data for Aptos, CA",
         lat: 36.9772,
