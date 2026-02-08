@@ -15,6 +15,7 @@ const CITY_FILES: Record<string, string> = {
     'DEN': 'denver_weather.csv',
     'PHX': 'phoenix_weather.csv',
     'PAR': 'parrish_weather.csv',
+    'APT': 'aptos_weather.csv',
 };
 
 export async function GET(request: NextRequest) {

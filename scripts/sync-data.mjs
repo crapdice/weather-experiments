@@ -15,6 +15,7 @@ const CITY_FILES = {
     'DEN': { name: 'Denver', file: 'denver_weather.csv', lat: 39.7392, lng: -104.9903 },
     'PHX': { name: 'Phoenix', file: 'phoenix_weather.csv', lat: 33.4484, lng: -112.0740 },
     'PAR': { name: 'Parrish, FL', file: 'parrish_weather.csv', lat: 27.5815, lng: -82.4220 },
+    'APT': { name: 'Aptos, CA', file: 'aptos_weather.csv', lat: 36.9772, lng: -121.9078 },
 };
 
 function getCities() {
@@ -44,15 +45,24 @@ async function fetchACISData(stationId, sdate, edate) {
 }
 
 async function fetchOpenMeteoData(lat, lon, sdate, edate) {
-    console.log(`    -> Open-Meteo for ${lat}, ${lon}...`);
+    console.log(`    -> Open-Meteo for ${lat}, ${lon} from ${sdate} to ${edate}...`);
     const variables = ['temperature_2m_max', 'temperature_2m_min', 'temperature_2m_mean', 'precipitation_sum', 'snowfall_sum', 'wind_speed_10m_max', 'wind_gusts_10m_max'].join(',');
     const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${sdate}&end_date=${edate}&daily=${variables}&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`;
     try {
         const response = await fetch(url);
-        if (!response.ok) return null;
+        if (!response.ok) {
+            console.error(`    ❌ API Error: ${response.status} ${response.statusText}`);
+            return null;
+        }
         const json = await response.json();
+        if (!json.daily) {
+            console.error('    ❌ No daily data in response:', JSON.stringify(json).slice(0, 200));
+            return null;
+        }
+        console.log(`    Received ${json.daily.time.length} records.`);
         return json.daily || null;
     } catch (e) {
+        console.error('    ❌ Fetch failed:', e.message);
         return null;
     }
 }
@@ -70,16 +80,21 @@ async function syncCity(city) {
 
     console.log(`\n[${city.id}] Syncing ${city.name}...`);
 
-    if (!fs.existsSync(csvPath)) {
-        console.warn(`    ! File not found: ${csvPath}. Skipping.`);
-        return;
-    }
+    let lastDateStr = '1950-01-01'; // Default start for new cities
+    let dataRows = [];
+    let header = 'Date,Max Temp (°F),Min Temp (°F),Avg Temp (°F),Precipitation (in),Snowfall (in),Max Wind Speed (mph),Max Wind Gust (mph)';
 
-    const content = fs.readFileSync(csvPath, 'utf-8');
-    const lines = content.trim().split('\n');
-    const header = lines[0];
-    const dataRows = lines.slice(1);
-    const lastDateStr = dataRows[dataRows.length - 1].split(',')[0];
+    if (fs.existsSync(csvPath)) {
+        const content = fs.readFileSync(csvPath, 'utf-8');
+        const lines = content.trim().split('\n');
+        if (lines.length > 1) {
+            header = lines[0];
+            dataRows = lines.slice(1);
+            lastDateStr = dataRows[dataRows.length - 1].split(',')[0];
+        }
+    } else {
+        console.warn(`    ! File not found: ${csvPath}. Bootstrapping new city history from 1950.`);
+    }
 
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -97,7 +112,9 @@ async function syncCity(city) {
 
     console.log(`    Target Range: ${fetchStartStr} to ${yesterdayStr}`);
 
-    const omData = await fetchOpenMeteoData(city.lat, city.lng, fetchStartStr, yesterdayStr);
+    // Break into chunks if asking for too much data (Open-Meteo limits)
+    // Actually Open-Meteo Archive API handles large ranges well, let's try one shot first.
+    let omData = await fetchOpenMeteoData(city.lat, city.lng, fetchStartStr, yesterdayStr);
 
     // ACIS is for high-precision station data (Chicago/KORD only)
     let acisData = null;
