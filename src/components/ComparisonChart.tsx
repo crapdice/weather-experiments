@@ -8,17 +8,27 @@ import { useDimensions } from '@/hooks/useDimensions';
 
 interface Props {
   data: WeatherRecord[];
+  initialYear1?: number;
+  initialYear2?: number;
 }
 
-export function ComparisonChart({ data }: Props) {
+export function ComparisonChart({ data, initialYear1, initialYear2 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const { width: containerWidth } = useDimensions(containerRef);
 
   const years = Array.from(new Set(data.map(d => d.Year))).sort((a, b) => b - a);
 
-  const [year1, setYear1] = useState(years[0]);
-  const [year2, setYear2] = useState(years[Math.min(years.length - 1, 10)]);
+  const [year1, setYear1] = useState(initialYear1 || years[0]);
+  const [year2, setYear2] = useState(initialYear2 || years[Math.min(years.length - 1, 10)]);
+
+  useEffect(() => {
+    if (initialYear1) setYear1(initialYear1);
+  }, [initialYear1]);
+
+  useEffect(() => {
+    if (initialYear2) setYear2(initialYear2);
+  }, [initialYear2]);
 
   useEffect(() => {
     if (!data.length || !svgRef.current || containerWidth === 0) return;

@@ -6,18 +6,24 @@ import { ClimateStats } from '@/types/weather';
 
 interface PatternMatchCardProps {
     stats: ClimateStats | null;
+    onSelectYear?: (year: number) => void;
 }
 
-export function PatternMatchCard({ stats }: PatternMatchCardProps) {
+export function PatternMatchCard({ stats, onSelectYear }: PatternMatchCardProps) {
     if (!stats || !stats.analogYear) return <MetricCard label="Pattern Match" value="--" delta="Calculating similarity..." />;
 
     return (
-        <MetricCard
-            label="Pattern Match"
-            value={stats.analogYear.year.toString()}
-            delta={`~${(stats.analogYear.similarityScore * 100).toFixed(0)}% Similarity`}
-            accent="primary"
-            help="The historical year with the most similar weather pattern to the last 30 days."
-        />
+        <div
+            onClick={() => onSelectYear?.(stats.analogYear!.year)}
+            style={{ cursor: onSelectYear ? 'pointer' : 'default' }}
+        >
+            <MetricCard
+                label="Pattern Match"
+                value={stats.analogYear.year.toString()}
+                delta={`~${(stats.analogYear.similarityScore * 100).toFixed(0)}% Similarity`}
+                accent="primary"
+                help="The historical year with the most similar weather pattern to the last 30 days. Click to view full year comparison."
+            />
+        </div>
     );
 }

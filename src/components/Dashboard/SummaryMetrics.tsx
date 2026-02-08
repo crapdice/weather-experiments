@@ -16,9 +16,10 @@ interface SummaryMetricsProps {
     data: WeatherRecord[];
     city: CityConfig;
     isSecondary?: boolean;
+    onSelectYear?: (year: number) => void;
 }
 
-export function SummaryMetrics({ stats, data, city, isSecondary = false }: SummaryMetricsProps) {
+export function SummaryMetrics({ stats, data, city, isSecondary = false, onSelectYear }: SummaryMetricsProps) {
     if (isSecondary) {
         return (
             <section className="metrics-grid secondary-metrics">
@@ -84,7 +85,7 @@ export function SummaryMetrics({ stats, data, city, isSecondary = false }: Summa
             <WindCard stats={stats} />
             <AnomalyCard stats={stats} />
             <StreakCard stats={stats} />
-            <PatternMatchCard stats={stats} />
+            <PatternMatchCard stats={stats} onSelectYear={onSelectYear} />
 
 
             <style jsx>{`

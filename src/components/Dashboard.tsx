@@ -60,6 +60,14 @@ export function Dashboard({ initialCityId, initialStats, initialDataSummary }: D
   const { data, stats, loading, refreshing, handleRefresh } = useWeather(selectedCity, initialStats, initialDataSummary);
   const [view, setView] = useState('overview');
   const [labTab, setLabTab] = useState('stripes');
+  const [comparisonYear, setComparisonYear] = useState<number | undefined>(undefined);
+
+  const handleYearSelect = (year: number) => {
+    setComparisonYear(year);
+    setView('comparison');
+    // Scroll to chart area if needed
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+  };
 
   if (loading) return <LoadingState />;
 
@@ -87,17 +95,30 @@ export function Dashboard({ initialCityId, initialStats, initialDataSummary }: D
       <main className="main-content">
         <DashboardHeader data={data} stats={stats} city={selectedCity} />
 
-        <SummaryMetrics data={data} stats={stats} city={selectedCity} />
+        <SummaryMetrics
+          data={data}
+          stats={stats}
+          city={selectedCity}
+          onSelectYear={handleYearSelect}
+        />
 
         <div className="chart-area glass-panel">
           {view === 'overview' && data.length > 0 && <OverviewChart data={data} />}
-          {view === 'comparison' && data.length > 0 && <ComparisonChart data={data} />}
+          {view === 'comparison' && data.length > 0 && (
+            <ComparisonChart data={data} initialYear1={comparisonYear} />
+          )}
           {view === 'lab' && (
             <LabContainer labTab={labTab} setLabTab={setLabTab} data={data} stats={stats} />
           )}
         </div>
 
-        <SummaryMetrics data={data} stats={stats} city={selectedCity} isSecondary />
+        <SummaryMetrics
+          data={data}
+          stats={stats}
+          city={selectedCity}
+          isSecondary
+          onSelectYear={handleYearSelect}
+        />
 
         <footer className="footer">
           <hr />
