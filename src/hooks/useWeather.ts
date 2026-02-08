@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { loadWeatherData } from '@/utils/weatherData';
-import { refreshWeatherData } from '@/api/weatherFetcher';
+import { refreshWeatherData } from '@/services/weatherFetcher';
 import { WeatherRecord, ClimateStats, CityConfig } from '@/types/weather';
 
 export function useWeather(city: CityConfig, initialStats?: ClimateStats | null, initialData?: WeatherRecord[]) {

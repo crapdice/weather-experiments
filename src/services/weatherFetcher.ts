@@ -3,9 +3,16 @@ import { calculateStats } from '../utils/statisticalEngine';
 import { processAndEnrich } from '../utils/dataProcessor';
 import { finalizeResults } from '../utils/weatherProcessor';
 
+const getBaseUrl = () => {
+    if (typeof window !== 'undefined') return ''; // Browser should use relative path
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+    return `http://localhost:3000`; // Fallback for local development server
+};
+
 export async function fetchCurrentWeather(lat = 41.9742, lng = -87.9073): Promise<WeatherFetchResult | undefined> {
+    const baseUrl = getBaseUrl();
     try {
-        const res = await fetch(`/api/weather?type=current&lat=${lat}&lng=${lng}`);
+        const res = await fetch(`${baseUrl}/api/weather?type=current&lat=${lat}&lng=${lng}`);
         if (res.ok) {
             const json = await res.json();
             if (json.current && json.current.temperature_2m !== undefined) {
@@ -54,10 +61,11 @@ export async function refreshWeatherData(
 ): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {
     const lat = city?.lat ?? 41.9742;
     const lng = city?.lng ?? -87.9073;
+    const baseUrl = getBaseUrl();
 
     const currentInfo = await fetchCurrentWeather(lat, lng);
     try {
-        const response = await fetch(`/api/weather?type=forecast_past&lat=${lat}&lng=${lng}`);
+        const response = await fetch(`${baseUrl}/api/weather?type=forecast_past&lat=${lat}&lng=${lng}`);
         if (!response.ok) throw new Error(`Weather API error`);
 
         const apiData = await response.json();

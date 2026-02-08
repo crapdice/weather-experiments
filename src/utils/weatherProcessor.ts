@@ -3,6 +3,7 @@ import { calculateStats, calculateZScore, calculatePercentileRank, findLongestRe
 import { calculateSeasonalRank, calculateSeasonalComparisons } from './seasonalEngine';
 import { getDayOfYear } from './dateUtils';
 import { getSeasonNameByDate } from './seasonRegistry';
+import SunCalc from 'suncalc';
 
 export function finalizeResults(data: WeatherRecord[], stats: ClimateStats, currentInfo?: WeatherFetchResult) {
     if (currentInfo) {
@@ -90,6 +91,16 @@ export function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[],
     stats.seasonalSnow = calculateSeasonalRank(data, data, 'snow');
     stats.seasonalRain = calculateSeasonalRank(data, data, 'rain');
     stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
+
+    // Hydrate sun times
+    try {
+        const sunTimes = SunCalc.getTimes(currentInfo.time, 41.9742, -87.9073); // Defaulting to Chicago coordinates if none provided
+        const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        stats.sunrise = formatTime(sunTimes.sunrise);
+        stats.sunset = formatTime(sunTimes.sunset);
+    } catch (e) {
+        console.error("Failed to hydrate sun times", e);
+    }
 
     // Pass the full dataset as both current and history context. 
     stats.seasonalComparisons = calculateSeasonalComparisons(data, data);

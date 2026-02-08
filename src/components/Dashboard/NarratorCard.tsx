@@ -20,12 +20,29 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
     const [briefing, setBriefing] = useState<Briefing | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isFallback, setIsFallback] = useState(false);
+
+    const generateFactualFallback = () => {
+        if (!stats) return null;
+        const low = stats.todayMin?.toFixed(1) ?? 'N/A';
+        const high = stats.todayMax?.toFixed(1) ?? 'N/A';
+        const wind = stats.currentWind?.toFixed(1) ?? '0';
+        const rain = stats.todayRain ? `${stats.todayRain}"` : "None";
+        const sunrise = stats.sunrise || "N/A";
+        const sunset = stats.sunset || "N/A";
+
+        return {
+            headline: `TELEMETRY_REPORT: ${city.name} [STATION_ALPHA]`,
+            analysis: `WEATHER_SYNOPSIS: Currently ${stats.currentTemp}°F. Temperature bounded by a low of ${low}°F and a high of ${high}°F. Surface winds recorded at ${wind} mph. Hydrometeor accumulation: ${rain}. Daylight cycle established: Sunrise at ${sunrise}, Sunset at ${sunset}. Climatological context matches ${stats.analogYear} pattern.`
+        };
+    };
 
     const generateBriefing = async (forceRefetch = false) => {
         if (!stats) return;
 
         setLoading(true);
         setError(null);
+        setIsFallback(false);
 
         try {
             const cacheKey = `briefing_${city.id}_${new Date().toISOString().split('T')[0]}`;
@@ -38,8 +55,9 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                     return;
                 }
             } else {
-                // Clear cache for this key if forcing (Admin only)
+                // Clear cache and current state for this key if forcing (Admin only)
                 localStorage.removeItem(cacheKey);
+                setBriefing(null);
             }
 
             const response = await fetch('/api/narrator', {
@@ -58,7 +76,13 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
             localStorage.setItem(cacheKey, JSON.stringify(data));
         } catch (err: any) {
             console.error('Narrator UI Error:', err);
-            setError(err.message);
+            const fallback = generateFactualFallback();
+            if (fallback) {
+                setBriefing(fallback);
+                setIsFallback(true);
+            } else {
+                setError(err.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -82,7 +106,9 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                     <h3>DAILY_BRIEFING_FEED</h3>
                 </div>
                 <div className="header-controls">
-                    <div className="status-indicator">SYSTEM_ACTIVE</div>
+                    <div className={`status-indicator ${isFallback ? 'stale' : ''}`}>
+                        {isFallback ? 'TELEMETRY_FALLBACK' : 'SYSTEM_ACTIVE'}
+                    </div>
                     {isAdmin && (
                         <button
                             className={`refresh-mini ${loading ? 'spinning' : ''}`}
@@ -129,10 +155,10 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
             <style jsx>{`
                 .narrator-card {
                     grid-column: 1 / -1;
-                    padding: 24px;
+                    padding: 20px;
                     display: flex;
                     flex-direction: column;
-                    gap: 20px;
+                    gap: 16px;
                     background: var(--bg-page);
                     border: 1px solid var(--border-subtle);
                     position: relative;
@@ -191,6 +217,11 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                     letter-spacing: 1px;
                 }
 
+                .status-indicator.stale {
+                    color: #facc15;
+                    border-color: #facc15;
+                }
+
                 .refresh-mini {
                     background: none;
                     border: none;
@@ -216,6 +247,22 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                 .card-content {
                     position: relative;
                     z-index: 2;
+                    max-height: 350px;
+                    overflow-y: auto;
+                    padding-right: 10px;
+                }
+
+                .card-content::-webkit-scrollbar {
+                    width: 4px;
+                }
+
+                .card-content::-webkit-scrollbar-track {
+                    background: rgba(0, 0, 0, 0.1);
+                }
+
+                .card-content::-webkit-scrollbar-thumb {
+                    background: var(--accent-2);
+                    border-radius: 2px;
                 }
 
                 .terminal-output {
@@ -235,10 +282,11 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                 }
 
                 .divider {
-                    height: 1px;
-                    width: 40px;
+                    height: 2px;
+                    width: 60px;
                     background: var(--accent-2);
-                    opacity: 0.5;
+                    opacity: 0.8;
+                    margin: 4px 0;
                 }
 
                 .analysis {
@@ -247,7 +295,9 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                     line-height: 1.6;
                     color: rgba(255, 255, 255, 0.85);
                     margin: 0;
-                    max-width: 900px;
+                    max-width: 100%;
+                    overflow-wrap: break-word;
+                    word-wrap: break-word;
                 }
 
                 .terminal-loading {

@@ -5,7 +5,7 @@ import { processAndEnrich, getMoonPhase, getSunTimes } from './dataProcessor';
 import { getDayOfYear } from './dateUtils';
 import { SeasonType, SEASONS, getSeasonNameByDate } from './seasonRegistry';
 import { WeatherRecord, ClimateStats, SeasonalRank, WeatherFetchResult, CityConfig } from '../types/weather';
-import { fetchCurrentWeather } from '../api/weatherFetcher';
+import { fetchCurrentWeather } from '../services/weatherFetcher';
 import { finalizeResults } from './weatherProcessor';
 
 export async function loadWeatherData(url: string, city?: CityConfig): Promise<{ data: WeatherRecord[], stats: ClimateStats }> {

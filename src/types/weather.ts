@@ -86,6 +86,8 @@ export interface ClimateStats {
     lookbackYoY?: { period: string, current: number, previous: number, delta: number }[];
     dailyNormal?: { high: number, low: number, avg: number };
     seasonalMedians?: { snow: number, rain: number };
+    sunrise?: string;
+    sunset?: string;
 }
 
 export interface WeatherFetchResult {

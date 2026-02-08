@@ -29,6 +29,7 @@ export interface NarratorPayload {
         normalHigh: number | undefined;
         normalLow: number | undefined;
         normalAvg: number | undefined;
+        dayOfWeek: string;
         analogForecast?: { date: string, high: number, low: number, avg: number }[];
     };
     seasonal: {
@@ -68,6 +69,7 @@ export function prepareNarratorPayload(city: CityConfig, stats: ClimateStats): N
                 lastSimilarDate: 'N/A', volatility: 0, pulseDelta: 0, decadalDelta: 0,
                 currentWind: undefined, currentGust: undefined, todayRain: undefined, todaySnow: undefined,
                 sunrise: undefined, sunset: undefined, normalHigh: undefined, normalLow: undefined, normalAvg: undefined,
+                dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase(),
                 analogForecast: []
             },
             seasonal: { rainRank: undefined, rainTotal: undefined, rainMedian: undefined, snowRank: undefined, snowTotal: undefined, snowMedian: undefined, comparisons: [] },
@@ -136,6 +138,7 @@ export function prepareNarratorPayload(city: CityConfig, stats: ClimateStats): N
             normalHigh: stats.dailyNormal?.high,
             normalLow: stats.dailyNormal?.low,
             normalAvg: stats.dailyNormal?.avg,
+            dayOfWeek: today.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase(),
             analogForecast: Array.isArray(stats.analogForecast) ? stats.analogForecast : [],
         },
         seasonal: {

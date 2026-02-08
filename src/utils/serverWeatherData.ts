@@ -3,7 +3,7 @@ import path from 'path';
 import { parse } from 'csv-parse/sync';
 import { processAndEnrich } from './dataProcessor';
 import { finalizeResults } from './weatherProcessor';
-import { fetchCurrentWeather } from '@/api/weatherFetcher';
+import { fetchCurrentWeather } from '@/services/weatherFetcher';
 import { CityConfig } from '@/types/weather';
 import { getAdminSettings } from './adminSettings';
 
