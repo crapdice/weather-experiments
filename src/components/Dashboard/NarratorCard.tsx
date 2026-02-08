@@ -65,10 +65,12 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
     };
 
     useEffect(() => {
-        if (stats) {
+        // Only generate if we have COMPLETE stats (not just initial server-side stats)
+        // dailyNormal is a good proxy for "full stats" since it's computed after all data is loaded
+        if (stats && stats.dailyNormal) {
             generateBriefing();
         }
-    }, [stats?.currentTempTime, city.id]);
+    }, [stats?.currentTempTime, stats?.dailyNormal, city.id]);
 
     if (!stats) return null;
 
