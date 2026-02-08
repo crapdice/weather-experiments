@@ -1,45 +1,51 @@
 "use client";
 
 import React from 'react';
-import { MetricCard } from '../../MetricCard';
+import { MetricCard } from '@/components/MetricCard';
 import { ClimateStats } from '@/types/weather';
 
 interface SeasonalCardProps {
     stats: ClimateStats | null;
+    minSnowThreshold?: number;
 }
 
-export function SeasonalCard({ stats }: SeasonalCardProps) {
-    if (!stats) return null;
-
+// Logic Extracted for Testing
+export function getSeasonalDisplayState(stats: ClimateStats, minSnowThreshold: number = 0) {
     const currentTime = stats.currentTempTime || new Date();
     const month = currentTime.getMonth();
 
     // Default: Snow logic for Winter/Shoulder (Nov-Apr)
     let isSnowSeason = month >= 10 || month <= 3;
 
-    // Check recent snowfall to potentially switch modes
-    // If we're in "start of winter" (Nov/Dec) but have 0 snow, maybe show Rain?
-    // Or if we are in "late spring" (April) and have snow, force Snow mode.
+    // Check Climate Config
+    // If threshold is very high (e.g., 100 which implies NO SNOW), force Rain immediately.
+    if (minSnowThreshold && minSnowThreshold >= 50) {
+        isSnowSeason = false;
+    }
 
-    // Better Logic:
-    // If stats.seasonalSnow has value > 0.1, prioritize Snow in winter months.
-    // If stats.seasonalSnow is 0 AND we are in shoulder months (Nov, Mar, Apr), show Rain.
-
+    // Dynamic Switching Logic:
+    // If it is technically winter, BUT snow is negligible, switch to Rain for shoulder seasons.
     if (isSnowSeason && (stats.seasonalSnow?.value || 0) < 0.1) {
-        // It's technically winter, but we have no snow. 
-        // If it's deep winter (Jan/Feb), keep showing "0.0 Snow" to highlight the anomaly.
-        // If it's shoulder (Nov/Dec/Mar/Apr), switch to Rain.
+        // Shoulder months: Nov (10), Dec (11), Mar (2), Apr (3)
+        // Deep winter: Jan (0), Feb (1) -- Keep showing snow even if 0 unless customized
         if (month === 10 || month === 11 || month === 2 || month === 3) {
             isSnowSeason = false;
         }
     }
 
     const sStats = isSnowSeason ? stats.seasonalSnow : stats.seasonalRain;
+    const unit = isSnowSeason ? '" Snow' : '" Rain';
+    const label = isSnowSeason ? 'Season Snow' : `${sStats?.seasonName} Rain`;
+
+    return { isSnowSeason, sStats, unit, label };
+}
+
+export function SeasonalCard({ stats, minSnowThreshold = 0 }: SeasonalCardProps) {
+    if (!stats) return null;
+
+    const { sStats, unit, label, isSnowSeason } = getSeasonalDisplayState(stats, minSnowThreshold);
 
     if (!sStats) return null;
-
-    const unit = isSnowSeason ? '" Snow' : '" Rain';
-    const label = isSnowSeason ? 'Season Snow' : `${sStats.seasonName} Rain`;
 
     const getRankStr = (n: number) => {
         const j = n % 10, k = n % 100;

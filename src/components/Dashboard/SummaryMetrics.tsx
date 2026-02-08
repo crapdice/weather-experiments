@@ -81,7 +81,7 @@ export function SummaryMetrics({ stats, data, city, isSecondary = false, onSelec
                 The logic is safely hidden inside each specialized card.
             */}
             <ConditionsCard stats={stats} />
-            <SeasonalCard stats={stats} />
+            <SeasonalCard stats={stats} minSnowThreshold={city?.minSnowThreshold} />
             <WindCard stats={stats} />
             <AnomalyCard stats={stats} />
             <StreakCard stats={stats} />
