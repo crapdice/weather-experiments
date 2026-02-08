@@ -2,6 +2,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { prepareNarratorPayload } from "@/utils/narratorPayload";
 
+// 6-Hour Forensic Cache Initialization
+const CACHE = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 Hours in ms
+
 export async function POST(req: NextRequest) {
     const apiKey = process.env.GOOGLE_GEMINI_API_KEY?.trim();
 
@@ -42,6 +46,18 @@ export async function POST(req: NextRequest) {
 
         const payload = prepareNarratorPayload(city, stats);
 
+        // Cache Key: City ID + 6-hour epoch bucket
+        const bucketIndex = Math.floor(Date.now() / CACHE_DURATION);
+        const cacheKey = `${payload.city.name}-${bucketIndex}`;
+
+        // Check Cache
+        const cached = CACHE.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+            console.log(`[CACHE HIT] Delivering forensic briefing for ${payload.city.name} (Bucket: ${bucketIndex})`);
+            return NextResponse.json(cached.data);
+        }
+
+        console.log(`[CACHE MISS] Generating new forensic briefing for ${payload.city.name}`);
         console.log("--- NARRATOR API DEBUG: PAYLOAD ---");
         console.log(JSON.stringify(payload, null, 2));
 
@@ -96,9 +112,9 @@ export async function POST(req: NextRequest) {
       10. HISTORICAL WEIGHT: When a data point ranks in the Top 10 or Bottom 10 of history, treat it as a headline event. Use phrases like 'one for the record books' or 'rare for this time of year' to add weight to the statistics.
       11. DYNAMIC DAILY PERSONALITY: Adjust your tone based on ${payload.stats.dayOfWeek} to match the user's likely headspace:
           - MONDAY (The No-Nonsense Pro): Be brief, high-energy, and focused on the facts. Help them conquer the commute. Provide a general interest topic of conversation for the day.
-          - TUESDAY (The Data Nerd): Since users are focused, you can be more "Forensic." Deep-dive into the 2012 Analog Year stats. "We're in the thick of it now."
-          - WEDNESDAY (The Encourager): Acknowledge the midweek slog. Use a bit of wit or a "weather win" to lift the mood. "You're halfway through; here's a silver lining."
-          - THURSDAY (The Optimist): Start looking ahead. Frame the weather in terms of "weekend potential." "The finish line is in sight."
+          - TUESDAY (The Data Nerd): Since users are focused, you can be more "Forensic." Deep-dive into the 2012 Analog Year stats. Tell a joke about why Tuesday sucks. 
+          - WEDNESDAY (The Encourager): Acknowledge the midweek slog. Use a bit of wit or a "weather win" to lift the mood. Say something witty about "hump day." 
+          - THURSDAY (The Optimist): Start looking ahead. Frame the weather in terms of "weekend potential." Provide a up to date topic in the news.
           - FRIDAY (The Hype-Man): Keep it punchy and celebratory. If the weather is bad, make a joke about it ruining Friday plans otherwise provide an idea on what to do for the weekend.
           - SATURDAY (The Storyteller): Be more descriptive and "knowledgeable expert." Use more adjectives. Reference something that happened this day in history.
           - SUNDAY (The Calm Observer): Use a chill, low-pressure tone. Focus on the sunset and the "wind down." Tell a weather joke. 
@@ -131,7 +147,15 @@ export async function POST(req: NextRequest) {
         text = text.replace(/```json\n?/, '').replace(/\n?```/, '').trim();
 
         try {
-            return NextResponse.json(JSON.parse(text));
+            const briefing = JSON.parse(text);
+
+            // Store in Cache
+            CACHE.set(cacheKey, {
+                data: briefing,
+                timestamp: Date.now()
+            });
+
+            return NextResponse.json(briefing);
         } catch (parseError) {
             console.error("Narrator API: Failed to parse Gemini response:", text);
             return NextResponse.json({ error: "Invalid AI response format" }, { status: 500 });
