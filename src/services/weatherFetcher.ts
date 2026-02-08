@@ -71,7 +71,7 @@ export async function refreshWeatherData(
         const apiData = await response.json();
         if (!apiData.daily || !apiData.daily.time) {
             const stats = calculateStats(currentData);
-            return finalizeResults(currentData, stats, currentInfo);
+            return finalizeResults(currentData, stats, currentInfo, city);
         }
 
         const newRecordsRaw = apiData.daily.time.map((time: string, i: number) => ({
@@ -90,7 +90,7 @@ export async function refreshWeatherData(
 
         if (uniqueNew.length === 0) {
             const stats = calculateStats(currentData);
-            return finalizeResults(currentData, stats, currentInfo);
+            return finalizeResults(currentData, stats, currentInfo, city);
         }
 
         const rawCurrent = currentData.map(d => ({
@@ -105,10 +105,10 @@ export async function refreshWeatherData(
         }));
 
         const { data: finalData, stats: finalStats } = processAndEnrich([...rawCurrent, ...uniqueNew]);
-        return finalizeResults(finalData, finalStats, currentInfo);
+        return finalizeResults(finalData, finalStats, currentInfo, city);
     } catch (e) {
         console.error("Refresh failed:", e);
         const stats = calculateStats(currentData);
-        return finalizeResults(currentData, stats, currentInfo);
+        return finalizeResults(currentData, stats, currentInfo, city);
     }
 }

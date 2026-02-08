@@ -6,6 +6,7 @@ export interface CityConfig {
     subtitle: string;
     lat: number;
     lng: number;
+    timezone?: string;
 }
 
 export interface SeasonalRank {

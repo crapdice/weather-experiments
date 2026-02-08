@@ -70,7 +70,7 @@ export async function loadServerWeatherData(cityId: string, city: CityConfig) {
         }
 
         const { data, stats } = processAndEnrich(mergedRawData as unknown as Record<string, unknown>[]);
-        return finalizeResults(data, stats, currentInfo);
+        return finalizeResults(data, stats, currentInfo, city);
     }
 
     // Non-static fallback (e.g. other cities via API or other means)

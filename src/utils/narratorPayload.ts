@@ -69,7 +69,10 @@ export function prepareNarratorPayload(city: CityConfig, stats: ClimateStats): N
                 lastSimilarDate: 'N/A', volatility: 0, pulseDelta: 0, decadalDelta: 0,
                 currentWind: undefined, currentGust: undefined, todayRain: undefined, todaySnow: undefined,
                 sunrise: undefined, sunset: undefined, normalHigh: undefined, normalLow: undefined, normalAvg: undefined,
-                dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase(),
+                dayOfWeek: new Date().toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    timeZone: city?.timezone || 'America/Chicago'
+                }).toUpperCase(),
                 analogForecast: []
             },
             seasonal: { rainRank: undefined, rainTotal: undefined, rainMedian: undefined, snowRank: undefined, snowTotal: undefined, snowMedian: undefined, comparisons: [] },
@@ -96,7 +99,11 @@ export function prepareNarratorPayload(city: CityConfig, stats: ClimateStats): N
 
     const formatTime = (date: Date) => {
         if (!date || isNaN(date.getTime())) return 'N/A';
-        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: city?.timezone || 'America/Chicago'
+        });
     };
 
     const safeDate = (val: any): string => {
@@ -138,7 +145,10 @@ export function prepareNarratorPayload(city: CityConfig, stats: ClimateStats): N
             normalHigh: stats.dailyNormal?.high,
             normalLow: stats.dailyNormal?.low,
             normalAvg: stats.dailyNormal?.avg,
-            dayOfWeek: today.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase(),
+            dayOfWeek: today.toLocaleDateString('en-US', {
+                weekday: 'long',
+                timeZone: city?.timezone || 'America/Chicago'
+            }).toUpperCase(),
             analogForecast: Array.isArray(stats.analogForecast) ? stats.analogForecast : [],
         },
         seasonal: {

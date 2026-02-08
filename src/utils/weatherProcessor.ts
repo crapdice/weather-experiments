@@ -5,7 +5,7 @@ import { getDayOfYear } from './dateUtils';
 import { getSeasonNameByDate } from './seasonRegistry';
 import SunCalc from 'suncalc';
 
-export function finalizeResults(data: WeatherRecord[], stats: ClimateStats, currentInfo?: WeatherFetchResult) {
+export function finalizeResults(data: WeatherRecord[], stats: ClimateStats, currentInfo?: WeatherFetchResult, city?: CityConfig) {
     if (currentInfo) {
         // Ensure today (from observation) exists in data
         const todayStr = currentInfo.time.toISOString().split('T')[0];
@@ -30,12 +30,12 @@ export function finalizeResults(data: WeatherRecord[], stats: ClimateStats, curr
             Object.assign(stats, calculateStats(data));
         }
 
-        hydrateRealtimeStats(stats, data, currentInfo);
+        hydrateRealtimeStats(stats, data, currentInfo, city);
     }
     return { data, stats };
 }
 
-export function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], currentInfo: WeatherFetchResult) {
+export function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[], currentInfo: WeatherFetchResult, city?: CityConfig) {
     stats.currentTemp = currentInfo.temp;
     stats.currentPrecip = currentInfo.precip;
     stats.currentTempTime = currentInfo.time;
@@ -92,10 +92,19 @@ export function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[],
     stats.seasonalRain = calculateSeasonalRank(data, data, 'rain');
     stats.lastSimilarDate = findLastSimilarDate(data, currentInfo.todayMax, currentInfo.todayMin);
 
-    // Hydrate sun times
+    // Hydrate sun times using city-specific coords and timezone
     try {
-        const sunTimes = SunCalc.getTimes(currentInfo.time, 41.9742, -87.9073); // Defaulting to Chicago coordinates if none provided
-        const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const lat = city?.lat ?? 41.9742;
+        const lng = city?.lng ?? -87.9073;
+        const timezone = city?.timezone ?? 'America/Chicago';
+
+        const sunTimes = SunCalc.getTimes(currentInfo.time, lat, lng);
+        const formatTime = (date: Date) => date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: timezone
+        });
+
         stats.sunrise = formatTime(sunTimes.sunrise);
         stats.sunset = formatTime(sunTimes.sunset);
     } catch (e) {
