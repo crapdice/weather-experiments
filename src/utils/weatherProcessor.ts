@@ -1,4 +1,4 @@
-import { WeatherRecord, ClimateStats, WeatherFetchResult } from '../types/weather';
+import { WeatherRecord, ClimateStats, WeatherFetchResult, CityConfig } from '../types/weather';
 import { calculateStats, calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear, findLastSimilarDate } from './statisticalEngine';
 import { calculateSeasonalRank, calculateSeasonalComparisons } from './seasonalEngine';
 import { getDayOfYear } from './dateUtils';
