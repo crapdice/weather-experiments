@@ -11,9 +11,29 @@ interface SeasonalCardProps {
 export function SeasonalCard({ stats }: SeasonalCardProps) {
     if (!stats) return null;
 
-    const month = stats.currentTempTime ? stats.currentTempTime.getMonth() : new Date().getMonth();
-    // Show snow if we are between Nov (10) and April (3)
-    const isSnowSeason = month >= 10 || month <= 3;
+    const currentTime = stats.currentTempTime || new Date();
+    const month = currentTime.getMonth();
+
+    // Default: Snow logic for Winter/Shoulder (Nov-Apr)
+    let isSnowSeason = month >= 10 || month <= 3;
+
+    // Check recent snowfall to potentially switch modes
+    // If we're in "start of winter" (Nov/Dec) but have 0 snow, maybe show Rain?
+    // Or if we are in "late spring" (April) and have snow, force Snow mode.
+
+    // Better Logic:
+    // If stats.seasonalSnow has value > 0.1, prioritize Snow in winter months.
+    // If stats.seasonalSnow is 0 AND we are in shoulder months (Nov, Mar, Apr), show Rain.
+
+    if (isSnowSeason && (stats.seasonalSnow?.value || 0) < 0.1) {
+        // It's technically winter, but we have no snow. 
+        // If it's deep winter (Jan/Feb), keep showing "0.0 Snow" to highlight the anomaly.
+        // If it's shoulder (Nov/Dec/Mar/Apr), switch to Rain.
+        if (month === 10 || month === 11 || month === 2 || month === 3) {
+            isSnowSeason = false;
+        }
+    }
+
     const sStats = isSnowSeason ? stats.seasonalSnow : stats.seasonalRain;
 
     if (!sStats) return null;
