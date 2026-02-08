@@ -1,3 +1,5 @@
+import { parse } from 'csv-parse/sync';
+
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
@@ -35,6 +37,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'City not configured' }, { status: 404 });
     }
 
+
     try {
         // Read from private directory (outside public/)
         const filePath = path.join(process.cwd(), 'private_data', fileName);
@@ -45,12 +48,22 @@ export async function GET(request: NextRequest) {
 
         const csvContent = fs.readFileSync(filePath, 'utf-8');
 
-        // Return as CSV with appropriate headers
-        return new NextResponse(csvContent, {
+        // Parse CSV to JSON
+        const allRecords = parse(csvContent, {
+            columns: true,
+            skip_empty_lines: true,
+            cast: true
+        });
+
+        // Limit to last 14 days (2 weeks) to prevent huge payload
+        const recentRecords = allRecords.slice(-14);
+
+        // Return as JSON
+        return NextResponse.json(recentRecords, {
             status: 200,
             headers: {
-                'Content-Type': 'text/csv',
-                'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+                'Cache-Control': 'no-store, must-revalidate', // Force fresh fetch
+                'Pragma': 'no-cache',
             },
         });
     } catch (error) {

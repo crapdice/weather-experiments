@@ -5,9 +5,6 @@ import { prepareNarratorPayload } from "@/utils/narratorPayload";
 export async function POST(req: NextRequest) {
     const apiKey = process.env.GOOGLE_GEMINI_API_KEY?.trim();
 
-    if (apiKey) {
-        console.log(`[DEBUG] API Key detected. Length: ${apiKey.length}. Starts with: ${apiKey.substring(0, 4)}... Ends with: ...${apiKey.substring(apiKey.length - 4)}`);
-    }
 
     if (!apiKey) {
         return NextResponse.json(
