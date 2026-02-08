@@ -255,11 +255,25 @@ export function D3Chart({
             g1.selectAll(".snow-bar").data(viewData.filter(d => getSnowfall(d) > 0)).enter().append("rect").attr("class", "snow-bar").attr("x", d => x(d.Date) - barWidth / 2).attr("y", d => ySnow(getSnowfall(d))).attr("width", barWidth).attr("height", d => h1 - ySnow(getSnowfall(d))).attr("fill", "#ffffff").attr("opacity", 0.2).attr("pointer-events", "none");
         }
 
-        const area = d3.area<any>().x(d => x(d.Date)).y0(d => y1(d.MeanLow || 0)).y1(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
+        const area = d3.area<any>()
+            .defined(d => d.MeanHigh != null && !isNaN(d.MeanHigh) && d.MeanLow != null && !isNaN(d.MeanLow))
+            .x(d => x(d.Date))
+            .y0(d => y1(d.MeanLow || 0))
+            .y1(d => y1(d.MeanHigh || 0))
+            .curve(d3.curveMonotoneX);
         g1.append("path").datum(plotData).attr("fill", "var(--text-primary)").attr("opacity", 0.1).attr("d", area).attr("clip-path", "url(#clip-main)");
 
-        const lineHigh = d3.line<any>().x(d => x(d.Date)).y(d => y1(d.MeanHigh || 0)).curve(d3.curveMonotoneX);
-        const lineLow = d3.line<any>().x(d => x(d.Date)).y(d => y1(d.MeanLow || 0)).curve(d3.curveMonotoneX);
+        const lineHigh = d3.line<any>()
+            .defined(d => d.MeanHigh != null && !isNaN(d.MeanHigh))
+            .x(d => x(d.Date))
+            .y(d => y1(d.MeanHigh || 0))
+            .curve(d3.curveMonotoneX);
+
+        const lineLow = d3.line<any>()
+            .defined(d => d.MeanLow != null && !isNaN(d.MeanLow))
+            .x(d => x(d.Date))
+            .y(d => y1(d.MeanLow || 0))
+            .curve(d3.curveMonotoneX);
 
         g1.append("path").datum(plotData).attr("fill", "none").attr("stroke", "#ff3366").attr("stroke-width", 2).attr("opacity", 0.4).attr("d", lineHigh).attr("clip-path", "url(#clip-main)");
         g1.append("path").datum(plotData).attr("fill", "none").attr("stroke", "#00ccff").attr("stroke-width", 2).attr("opacity", 0.4).attr("d", lineLow).attr("clip-path", "url(#clip-main)");
