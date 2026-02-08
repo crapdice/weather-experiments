@@ -15,10 +15,32 @@ export async function loadWeatherData(url: string, city?: CityConfig): Promise<{
     const lat = city?.lat ?? 41.9742;
     const lng = city?.lng ?? -87.9073;
 
-    const rawDataCSV = await d3.csv(targetUrl);
+    let mergedRawData: any[] = [];
+    let rawDataCSV: any[] = [];
+
+    try {
+        if (targetUrl.endsWith('.csv')) {
+            rawDataCSV = await d3.csv(targetUrl);
+        } else {
+            const res = await fetch(targetUrl);
+            if (!res.ok) throw new Error(`Failed to fetch weather data: ${res.statusText}`);
+
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                rawDataCSV = await res.json();
+            } else {
+                const text = await res.text();
+                rawDataCSV = d3.csvParse(text);
+            }
+        }
+    } catch (err) {
+        console.error("Error loading weather data:", err);
+        return { data: [], stats: {} as any };
+    }
+
     const currentInfo = await fetchCurrentWeather(lat, lng);
 
-    let mergedRawData: Record<string, string | number | null | undefined>[] = rawDataCSV;
+    mergedRawData = rawDataCSV;
 
     if (currentInfo && currentInfo.recentHistory) {
         const dataMap = new Map();

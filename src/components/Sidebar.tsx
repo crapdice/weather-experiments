@@ -4,6 +4,7 @@ import React from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAdmin } from '@/context/AdminContext';
 import { Activity, ArrowLeftRight, FlaskConical, RefreshCw, Lock, Key } from 'lucide-react';
+import { AdminSettingsPanel } from '@/components/Admin/AdminSettingsPanel';
 
 import { CityConfig } from '@/types/weather';
 import { CITIES } from '@/utils/cityConfig';
@@ -131,6 +132,7 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, i
         <button className="admin-btn" onClick={handleAdminAuth}>
           {isAdmin ? <><Lock size={14} /> Admin Active</> : <><Key size={14} /> Admin Access</>}
         </button>
+        <AdminSettingsPanel />
       </div>
 
       <style jsx>{`

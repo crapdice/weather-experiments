@@ -1,4 +1,5 @@
 import { parse } from 'csv-parse/sync';
+import { getAdminSettings } from '@/utils/adminSettings';
 
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
@@ -55,8 +56,8 @@ export async function GET(request: NextRequest) {
             cast: true
         });
 
-        // Limit to last 14 days (2 weeks) to prevent huge payload
-        const recentRecords = allRecords.slice(-14);
+        // Return full dataset for internal app
+        const recentRecords = allRecords;
 
         // Return as JSON
         return NextResponse.json(recentRecords, {
