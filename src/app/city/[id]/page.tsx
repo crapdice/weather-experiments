@@ -3,6 +3,8 @@ import React from 'react';
 import { Dashboard } from '@/components/Dashboard';
 import { CITIES } from '@/utils/cityConfig';
 import { Metadata } from 'next';
+import { WeatherRecord, ClimateStats } from '@/types/weather';
+import { loadServerWeatherData } from '@/utils/serverWeatherData';
 
 type Props = {
     params: { id: string }
@@ -36,14 +38,13 @@ export function generateStaticParams() {
     }));
 }
 
-import { loadServerWeatherData } from '@/utils/serverWeatherData';
 
 export default async function CityPage({ params }: Props) {
     const resolvedParams = await Promise.resolve(params); // Future-proof
     const cityId = resolvedParams.id.toUpperCase();
     const city = CITIES.find(c => c.id === cityId);
 
-    let initialData = { data: [], stats: null };
+    let initialData: { data: WeatherRecord[], stats: ClimateStats | null } = { data: [], stats: null };
 
     // Only attempt server load for static-optimized cities (CHI) or reliable APIs
     if (city && city.id === 'CHI') {
