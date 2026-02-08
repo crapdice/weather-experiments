@@ -72,7 +72,7 @@ TASK:
 OUTPUT FORMAT (Strict JSON):
 
 {
-  "headline": "...",
+  "headline": "...",c9
   "analysis": "..."
 }
 `;

@@ -8,6 +8,7 @@ import { AdminSettingsPanel } from '@/components/Admin/AdminSettingsPanel';
 
 import { CityConfig } from '@/types/weather';
 import { CITIES } from '@/utils/cityConfig';
+import { PreciseLocationButton } from '@/components/PreciseLocationButton';
 
 interface SidebarProps {
   currentView: string;
@@ -87,7 +88,11 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, i
             <option key={c.id} value={c.id}>{c.name} ({c.id})</option>
           ))}
         </select>
+        <div style={{ marginTop: '12px' }}>
+          <PreciseLocationButton currentCityId={selectedCity.id} />
+        </div>
       </div>
+
 
       <div className="sidebar-section">
         <h3>Live Intelligence Feed</h3>
