@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { prepareNarratorPayload } from "@/utils/narratorPayload";
+import { isAdmin as checkAdminStatus } from "@/lib/auth";
 
 // 6-Hour Forensic Cache Initialization
 const CACHE = new Map<string, { data: any; timestamp: number }>();
@@ -45,16 +46,21 @@ export async function POST(req: NextRequest) {
         }
 
         const payload = prepareNarratorPayload(city, stats);
+        const userIsAdmin = await checkAdminStatus();
 
         // Cache Key: City ID + 6-hour epoch bucket
         const bucketIndex = Math.floor(Date.now() / CACHE_DURATION);
         const cacheKey = `${payload.city.name}-${bucketIndex}`;
 
-        // Check Cache
-        const cached = CACHE.get(cacheKey);
-        if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-            console.log(`[CACHE HIT] Delivering forensic briefing for ${payload.city.name} (Bucket: ${bucketIndex})`);
-            return NextResponse.json(cached.data);
+        // Check Cache (Skip if Admin)
+        if (!userIsAdmin) {
+            const cached = CACHE.get(cacheKey);
+            if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+                console.log(`[CACHE HIT] Delivering forensic briefing for ${payload.city.name} (Bucket: ${bucketIndex})`);
+                return NextResponse.json(cached.data);
+            }
+        } else {
+            console.log(`[ADMIN BYPASS] Skipping cache for administrative revalidation on ${payload.city.name}`);
         }
 
         console.log(`[CACHE MISS] Generating new forensic briefing for ${payload.city.name}`);
@@ -121,7 +127,7 @@ export async function POST(req: NextRequest) {
 
       TASK:
       1. HEADLINE: A clear, engaging summary (max 10 words).
-      2. ANALYSIS: A friendly 5-6 sentence explanation. Connect today's feels to the bigger seasonal picture. Include the exact sunrise and sunset times. End with a 2-sentence "Forensic Outlook" based on the pattern from ${payload.stats.analogYear}.
+      2. ANALYSIS: An abusive 5-6 sentence explanation. Connect today's feels to the bigger seasonal picture. Include the exact sunrise and sunset times. End with a 2-sentence "Forensic Outlook" based on the pattern from ${payload.stats.analogYear}.
 
       OUTPUT FORMAT (Strict JSON):
       {
