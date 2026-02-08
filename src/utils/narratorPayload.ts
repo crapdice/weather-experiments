@@ -29,6 +29,7 @@ export interface NarratorPayload {
         normalHigh: number | undefined;
         normalLow: number | undefined;
         normalAvg: number | undefined;
+        analogForecast?: { date: string, high: number, low: number, avg: number }[];
     };
     seasonal: {
         rainRank: number | undefined;
@@ -55,10 +56,13 @@ export interface NarratorPayload {
 }
 
 export function prepareNarratorPayload(city: CityConfig, stats: ClimateStats): NarratorPayload {
-    const today = stats.currentTempTime || new Date();
+    // Ensure we have a valid Date object for SunCalc. 
+    // Data coming from the API will have Date strings, not Date objects.
+    const today = stats.currentTempTime ? new Date(stats.currentTempTime) : new Date();
     const sunTimes = SunCalc.getTimes(today, city.lat, city.lng);
 
     const formatTime = (date: Date) => {
+        if (!date || isNaN(date.getTime())) return 'N/A';
         return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     };
 
@@ -94,6 +98,7 @@ export function prepareNarratorPayload(city: CityConfig, stats: ClimateStats): N
             normalHigh: stats.dailyNormal?.high,
             normalLow: stats.dailyNormal?.low,
             normalAvg: stats.dailyNormal?.avg,
+            analogForecast: stats.analogForecast,
         },
         seasonal: {
             rainRank: stats.seasonalRain?.rank,

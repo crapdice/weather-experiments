@@ -257,7 +257,7 @@ export function RadialCompass({ data }: Props) {
           font-weight: 800;
         }
         select {
-          background: var(--bg-component);
+          background: var(--bg-page);
           border: 1px solid var(--border-subtle);
           color: var(--text-primary);
           padding: 10px 16px;
@@ -267,12 +267,12 @@ export function RadialCompass({ data }: Props) {
           outline: none;
         }
         select option {
-            background: #111; /* Explicit dark background for dropdown */
-            color: #fff;
+            background: var(--bg-page);
+            color: var(--text-primary);
         }
         .radial-chart-box {
             padding: 20px;
-            background: rgba(0,0,0,0.2);
+            background: var(--bg-page);
         }
       `}</style>
         </div>

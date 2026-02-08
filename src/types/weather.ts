@@ -79,6 +79,7 @@ export interface ClimateStats {
     yoyStreak?: { count: number, type: 'above' | 'below' };
 
     analogYear?: { year: number, similarityScore: number };
+    analogForecast?: { date: string, high: number, low: number, avg: number }[];
     seasonalRain?: SeasonalRank;
     seasonalSnow?: SeasonalRank;
     seasonalComparisons?: SeasonalComparison[];

@@ -53,7 +53,27 @@ export function hydrateRealtimeStats(stats: ClimateStats, data: WeatherRecord[],
     stats.todayPercentile = calculatePercentileRank(dailyProjectedMean, historyForDay);
 
     const recentHistory = data.slice(-30);
-    stats.analogYear = findAnalogYear(recentHistory, data);
+    const analog = findAnalogYear(recentHistory, data);
+    stats.analogYear = analog;
+
+    // Generate a 7-day "forecast" based on the analog year
+    if (analog && analog.year > 0) {
+        const todayDoy = getDayOfYear(currentInfo.time);
+        const forecastDays = [];
+        for (let i = 1; i <= 7; i++) {
+            const targetDoy = ((todayDoy + i - 1) % 366) + 1;
+            const match = data.find(d => d.Year === analog.year && d.DayOfYear === targetDoy);
+            if (match) {
+                forecastDays.push({
+                    date: match.Date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    high: match['Max Temp (°F)'],
+                    low: match['Min Temp (°F)'],
+                    avg: match['Avg Temp (°F)']
+                });
+            }
+        }
+        stats.analogForecast = forecastDays;
+    }
 
     const isFreezing = currentInfo.temp < 32;
     const streakFreezing = findLongestRecentStreak(data, d => isFreezing ? d['Avg Temp (°F)'] < 32 : d['Avg Temp (°F)'] >= 32);

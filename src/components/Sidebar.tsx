@@ -243,7 +243,7 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, i
           font-size: 0.75rem;
           color: var(--text-secondary);
           padding: 12px;
-          background: rgba(0, 0, 0, 0.2);
+          background: var(--bg-component);
           border-radius: 6px;
           border: 1px solid var(--border-subtle);
           display: flex;

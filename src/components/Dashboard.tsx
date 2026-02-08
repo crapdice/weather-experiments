@@ -136,7 +136,7 @@ export function Dashboard({ initialCityId }: DashboardProps) {
           padding: 32px;
           display: flex;
           flex-direction: column;
-          background: var(--bg-component);
+          background: var(--bg-page);
         }
 
         .footer {

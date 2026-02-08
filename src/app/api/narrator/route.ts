@@ -61,16 +61,21 @@ export async function POST(req: NextRequest) {
       COMPARED TO PREVIOUS YEAR (YoY Lookback):
       ${payload.lookbackYoY.map(l => `- ${l.period}: ${l.delta > 0 ? '+' : ''}${l.delta.toFixed(2)}°F vs last year (Curr: ${l.current.toFixed(1)}°F vs Prev: ${l.previous.toFixed(1)}°F)`).join('\n')}
 
+      FORENSIC PROJECTION (Based on Similar Pattern in ${payload.stats.analogYear}):
+      ${payload.stats.analogForecast?.map(f => `- ${f.date}: High ${f.high}°F / Low ${f.low}°F`).join('\n')}
+
       NARRATIVE GUIDELINES:
       1. TONE: Honest, relatable, and user-centric weather expert.
       2. TEMPORAL SENTIMENT: Priority 1 is the NOW. If the user is in a long cold streak (>10 days), do not describe the winter as "warm" or "moderate" just because December was hot. Acknowledge that the current pattern is defining the seasonal feel.
       3. DATA BENCHMARKS: Use the "Historical Medians" to judge if we are truly wet or snowy. If Snow Total is less than Median, do NOT say we are above average.
       4. HUMAN IMPACT: Specifically mention how today's temps compare to the "Climatological Normal." e.g. "We are shivering 6 degrees below what is typical for this date."
-      5. BE HONEST: If the data shows a 6-degree drop from last year, don't minimize it.
+      5. DAYLIGHT CYCLE: You MUST explicitly include the "Sunrise" and "Sunset" times provided in the ANALYSIS section.
+      6. FORENSIC FORECAST: Use the data from the Analog Year (${payload.stats.analogYear}) to provide a "Forensic Lookahead" for the next week. Treat it as a "pattern-matched projection" rather than a 100% guarantee.
+      7. BE HONEST: If the data shows a 6-degree drop from last year, don't minimize it.
       
       TASK:
       1. HEADLINE: A clear, engaging summary (max 10 words).
-      2. ANALYSIS: A friendly 4- sentence explanation. Connect today's feels to the bigger seasonal picture. Don't just list numbers; tell a story.
+      2. ANALYSIS: A friendly 5-6 sentence explanation. Connect today's feels to the bigger seasonal picture. Include the exact sunrise and sunset times. End with a 2-sentence "Forensic Outlook" based on the pattern from ${payload.stats.analogYear}.
 
       OUTPUT FORMAT (Strict JSON):
       {

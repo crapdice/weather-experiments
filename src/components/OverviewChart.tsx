@@ -43,18 +43,20 @@ export function OverviewChart({ data }: OverviewChartProps) {
                 onTimeframeChange={handleTimeframeChange}
             />
 
-            <D3Chart
-                data={data}
-                dateRange={dateRange}
-                dimensions={dimensions}
-                isDrawMode={isDrawMode}
-                trendLine={trendLine}
-                showRain={showRain}
-                showSnow={showSnow}
-                smaWindow={smaWindow}
-                setDateRange={setDateRange}
-                setTrendLine={setTrendLine}
-            />
+            <div className="chart-wrapper">
+                <D3Chart
+                    data={data}
+                    dateRange={dateRange}
+                    dimensions={dimensions}
+                    isDrawMode={isDrawMode}
+                    trendLine={trendLine}
+                    showRain={showRain}
+                    showSnow={showSnow}
+                    smaWindow={smaWindow}
+                    setDateRange={setDateRange}
+                    setTrendLine={setTrendLine}
+                />
+            </div>
 
             {isAdmin && (
                 <SMAControls
@@ -67,8 +69,15 @@ export function OverviewChart({ data }: OverviewChartProps) {
                 .overview-container {
                     display: flex;
                     flex-direction: column;
-                    gap: 10px;
+                    gap: 16px;
                     width: 100%;
+                }
+                .chart-wrapper {
+                    position: relative;
+                    width: 100%;
+                    border: 1px solid var(--border-subtle);
+                    border-radius: 4px;
+                    background: var(--bg-page);
                 }
             `}</style>
         </div>

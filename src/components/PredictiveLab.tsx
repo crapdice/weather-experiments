@@ -223,7 +223,7 @@ export function PredictiveLab({ data }: Props) {
                 .toggle-group {
                     display: flex;
                     gap: 8px;
-                    background: rgba(0,0,0,0.2);
+                    background: var(--bg-component);
                     padding: 4px;
                     border-radius: 8px;
                 }

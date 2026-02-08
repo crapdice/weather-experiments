@@ -275,7 +275,7 @@ export function ThermalTopo({ data }: Props) {
           width: 100%;
           height: 650px;
           position: relative;
-          background: rgba(0, 0, 0, 0.5);
+          background: var(--bg-page);
           border-radius: 12px;
           overflow: hidden;
           border: 1px solid var(--border-subtle);
@@ -296,7 +296,7 @@ export function ThermalTopo({ data }: Props) {
           flex-direction: column;
           gap: 16px;
           width: 280px;
-          background: rgba(0,0,0,0.8);
+          background: var(--bg-component);
           border: 1px solid var(--accent-1);
           box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
           transition: all 0.3s ease;

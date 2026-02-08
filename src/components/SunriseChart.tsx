@@ -177,7 +177,7 @@ export function SunriseChart({ data }: SunriseChartProps) {
                     font-family: monospace;
                 }
                 .canvas-wrapper {
-                    background: rgba(0, 0, 0, 0.2);
+                    background: var(--bg-component);
                     border: 1px solid var(--border-subtle);
                     border-radius: 8px;
                     overflow: hidden;

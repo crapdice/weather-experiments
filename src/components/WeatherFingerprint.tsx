@@ -162,7 +162,7 @@ export function WeatherFingerprint({ data }: Props) {
                 .canvas-wrapper {
                     position: relative;
                     flex: 1;
-                    background: rgba(0,0,0,0.3);
+                    background: var(--bg-page);
                     border-radius: 12px;
                     overflow: hidden;
                     min-height: 400px;
@@ -182,7 +182,7 @@ export function WeatherFingerprint({ data }: Props) {
                     display: flex;
                     justify-content: space-between;
                     min-width: 160px;
-                    background: rgba(0,0,0,0.6);
+                    background: var(--bg-component);
                     padding: 6px 10px;
                     border-radius: 4px;
                     border-left: 2px solid var(--accent-1);

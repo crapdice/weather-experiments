@@ -171,7 +171,7 @@ export function SeasonalComparisonPanelV2({ comparisons, seasonName }: Props) {
             <style jsx>{`
                 .seasonal-comparison-panel {
                     padding: 24px;
-                    background: var(--bg-component);
+                    background: var(--bg-page);
                     border-radius: 12px;
                     border: 1px solid var(--border-subtle);
                 }
@@ -254,7 +254,7 @@ export function SeasonalComparisonPanelV2({ comparisons, seasonName }: Props) {
                     gap: 16px;
                 }
                 .comparison-card {
-                    background: rgba(255, 255, 255, 0.02);
+                    background: var(--bg-page);
                     border: 1px solid var(--border-subtle);
                     border-radius: 12px;
                     padding: 20px;
@@ -264,7 +264,7 @@ export function SeasonalComparisonPanelV2({ comparisons, seasonName }: Props) {
                     transition: transform 0.2s, background 0.2s;
                 }
                 .comparison-card:hover {
-                    background: rgba(255, 255, 255, 0.04);
+                    background: var(--bg-component);
                     transform: translateY(-2px);
                 }
                 .metric-header {

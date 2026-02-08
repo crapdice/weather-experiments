@@ -1,10 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
+
 export const metadata: Metadata = {
   title: "Chicago O'Hare Weather Intelligence",
-  description: "High-fidelity climate data visualization for KORD (1940 - 2026)",
+  description: "High-fidelity climate data visualization for KORD (1940 - 2024)",
 };
 
 export const viewport: Viewport = {
@@ -19,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
+      <body className="antialiased">
         <Providers>
           {children}
         </Providers>

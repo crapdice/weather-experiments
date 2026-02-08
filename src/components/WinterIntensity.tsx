@@ -205,7 +205,7 @@ export function WinterIntensity({ data }: Props) {
           display: flex;
           flex-direction: column;
           gap: 24px;
-          background: rgba(10, 15, 25, 0.8);
+          background: var(--bg-page);
         }
         .chart-header {
           display: flex;
