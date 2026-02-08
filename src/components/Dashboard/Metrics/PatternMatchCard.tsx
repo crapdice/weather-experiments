@@ -15,7 +15,7 @@ export function PatternMatchCard({ stats, onSelectYear }: PatternMatchCardProps)
     return (
         <div
             onClick={() => onSelectYear?.(stats.analogYear!.year)}
-            style={{ cursor: onSelectYear ? 'pointer' : 'default' }}
+            style={{ cursor: onSelectYear ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', height: '100%' }}
         >
             <MetricCard
                 label="Pattern Match"
@@ -23,6 +23,7 @@ export function PatternMatchCard({ stats, onSelectYear }: PatternMatchCardProps)
                 delta={`~${(stats.analogYear.similarityScore * 100).toFixed(0)}% Similarity`}
                 accent="primary"
                 help="The historical year with the most similar weather pattern to the last 30 days. Click to view full year comparison."
+                style={{ height: '100%', flex: 1 }}
             />
         </div>
     );

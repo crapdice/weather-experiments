@@ -14,15 +14,16 @@ interface MetricCardProps {
     highLabel?: string;
     lowLabel?: string;
   };
+  style?: React.CSSProperties;
 }
 
-export function MetricCard({ label, value, delta, help, accent = 'primary', subValues }: MetricCardProps) {
+export function MetricCard({ label, value, delta, help, accent = 'primary', subValues, style }: MetricCardProps) {
   const accentColor = accent === 'primary' ? 'var(--accent-1)' :
     accent === 'secondary' ? 'var(--accent-2)' :
       'var(--ro-line)';
 
   return (
-    <div className="metric-card glass-panel" title={help}>
+    <div className="metric-card glass-panel" title={help} style={style}>
       <div className="card-top">
         <span className="metric-label">{label}</span>
         <div className="status-light" style={{ backgroundColor: accentColor }}></div>
