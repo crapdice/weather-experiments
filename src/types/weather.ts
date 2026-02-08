@@ -7,6 +7,7 @@ export interface CityConfig {
     lat: number;
     lng: number;
     timezone?: string;
+    minSnowThreshold?: number; // Minimum annual snowfall in inches to display snow stats
 }
 
 export interface SeasonalRank {

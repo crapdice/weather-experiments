@@ -9,7 +9,8 @@ export const CITIES: CityConfig[] = [
         subtitle: "Climate Data for Chicago O'Hare",
         lat: 41.9742,
         lng: -87.9073,
-        timezone: 'America/Chicago'
+        timezone: 'America/Chicago',
+        minSnowThreshold: 10.0
     },
     {
         id: 'NYC',
@@ -19,7 +20,8 @@ export const CITIES: CityConfig[] = [
         subtitle: "Climate Data for New York City",
         lat: 40.7128,
         lng: -74.0060,
-        timezone: 'America/New_York'
+        timezone: 'America/New_York',
+        minSnowThreshold: 10.0
     },
     {
         id: 'MIA',
@@ -29,7 +31,8 @@ export const CITIES: CityConfig[] = [
         subtitle: "Climate Data for Miami Int'l",
         lat: 25.7617,
         lng: -80.1918,
-        timezone: 'America/New_York'
+        timezone: 'America/New_York',
+        minSnowThreshold: 100.0 // Snow impossible
     },
     {
         id: 'LAX',
@@ -39,7 +42,8 @@ export const CITIES: CityConfig[] = [
         subtitle: "Climate Data for Los Angeles",
         lat: 34.0522,
         lng: -118.2437,
-        timezone: 'America/Los_Angeles'
+        timezone: 'America/Los_Angeles',
+        minSnowThreshold: 100.0 // Snow impossible
     },
     {
         id: 'DEN',
@@ -49,7 +53,8 @@ export const CITIES: CityConfig[] = [
         subtitle: "Climate Data for Denver Int'l",
         lat: 39.7392,
         lng: -104.9903,
-        timezone: 'America/Denver'
+        timezone: 'America/Denver',
+        minSnowThreshold: 10.0
     },
     {
         id: 'PHX',
@@ -59,7 +64,8 @@ export const CITIES: CityConfig[] = [
         subtitle: "Climate Data for Phoenix Sky Harbor",
         lat: 33.4484,
         lng: -112.0740,
-        timezone: 'America/Phoenix'
+        timezone: 'America/Phoenix',
+        minSnowThreshold: 100.0 // Snow impossible
     },
     {
         id: 'PAR',
@@ -69,6 +75,7 @@ export const CITIES: CityConfig[] = [
         subtitle: "Climate Data for Parrish, FL",
         lat: 27.5815,
         lng: -82.4220,
-        timezone: 'America/New_York'
+        timezone: 'America/New_York',
+        minSnowThreshold: 100.0 // Snow impossible
     }
 ];
