@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
 
       TASK:
       1. HEADLINE: A clear, engaging summary (max 10 words).
-      2. ANALYSIS: An abusive 5-6 sentence explanation. Connect today's feels to the bigger seasonal picture. Include the exact sunrise and sunset times. End with a 2-sentence "Forensic Outlook" based on the pattern from ${payload.stats.analogYear}.
+      2. ANALYSIS: An friendly 5-6 sentence explanation. Connect today's feels to the bigger seasonal picture. Include the exact sunrise and sunset times. End with a 2-sentence "Forensic Outlook" based on the pattern from ${payload.stats.analogYear}. THe final sentence should be a NSFW joke.
 
       OUTPUT FORMAT (Strict JSON):
       {
@@ -135,6 +135,9 @@ export async function POST(req: NextRequest) {
         "analysis": "..."
       }
     `;
+
+        console.log("--- GEMINI PROMPT ---");
+        console.log(prompt);
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
