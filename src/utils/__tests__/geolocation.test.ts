@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { haversineDistance, findNearestCity } from './geolocation';
+import { haversineDistance, findNearestCity } from '../geolocation';
 import { CITIES } from '@/config/cityConfig';
 
 describe('haversineDistance', () => {

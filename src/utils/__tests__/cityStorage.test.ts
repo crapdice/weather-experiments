@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getSavedCity, saveCity, clearSavedCity, STORAGE_KEY } from './cityStorage';
+import { getSavedCity, saveCity, clearSavedCity, STORAGE_KEY } from '../cityStorage';
 
 // Mock localStorage
 const localStorageMock = (() => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear } from './statisticalEngine';
+import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear } from '../statisticalEngine';
 import { WeatherRecord } from '@/types/weather';
 
 // Mock Data Utilities

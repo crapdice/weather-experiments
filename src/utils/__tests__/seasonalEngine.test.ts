@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateSeasonalRank } from './seasonalEngine';
+import { calculateSeasonalRank } from '../seasonalEngine';
 import { WeatherRecord } from '@/types/weather';
 
 // Mock Data Helper

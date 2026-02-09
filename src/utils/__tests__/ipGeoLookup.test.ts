@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { extractClientIp, lookupIpLocation } from './ipGeoLookup';
+import { extractClientIp, lookupIpLocation } from '../ipGeoLookup';
 
 describe('extractClientIp', () => {
     it('extracts IP from X-Forwarded-For header (single IP)', () => {
