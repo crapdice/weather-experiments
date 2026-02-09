@@ -20,6 +20,16 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Data Strategy
+
+This application uses a hybrid data lifecycle to ensure high performance and up-to-the-minute accuracy:
+
+*   **Static CSV Archives**: Found in `public/` and `private_data/` for rapid loading of historical trends.
+*   **Daily Automation**: GitHub Actions sync new data every 24 hours via `scripts/sync-data.mjs`.
+*   **Runtime Stitching**: The UI automatically "stitches" live API data onto static records in-memory to fill gaps in real-time.
+
+For a deep dive into our [External Data Sources](./docs/data-sources.md), synchronization logic, and local update instructions, see [docs/data-lifecycle.md](./docs/data-lifecycle.md).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

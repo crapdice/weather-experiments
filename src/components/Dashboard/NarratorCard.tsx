@@ -45,7 +45,13 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
         setIsFallback(false);
 
         try {
-            const cacheKey = `briefing_${city.id}_${new Date().toISOString().split('T')[0]}`;
+            // Robust Time-Bucketing (Local Time)
+            const now = new Date();
+            const localDate = now.toLocaleDateString('en-CA', { timeZone: city?.timezone || 'America/Chicago' }); // YYYY-MM-DD
+            const localHour = parseInt(now.toLocaleTimeString('en-GB', { timeZone: city?.timezone || 'America/Chicago', hour: '2-digit', hour12: false }));
+            const bucketIndex = Math.floor(localHour / 6);
+
+            const cacheKey = `briefing_${city.id}_${localDate}_B${bucketIndex}`;
 
             if (!forceRefetch) {
                 const cached = localStorage.getItem(cacheKey);
@@ -55,7 +61,7 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
                     return;
                 }
             } else {
-                // Clear cache and current state for this key if forcing (Admin only)
+                // Clear any existing cache for this specific city/bucket if forcing (Admin only)
                 localStorage.removeItem(cacheKey);
                 setBriefing(null);
             }
@@ -67,8 +73,17 @@ export function NarratorCard({ stats, city }: NarratorCardProps) {
             });
 
             if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Failed to generate briefing');
+                const errData = await response.json().catch(() => ({}));
+                console.warn('Narrator API Error (Handled):', errData.error || 'Failed to generate briefing');
+
+                const fallback = generateFactualFallback();
+                if (fallback) {
+                    setBriefing(fallback);
+                    setIsFallback(true);
+                } else {
+                    setError(errData.error || 'Failed to generate briefing');
+                }
+                return;
             }
 
             const data = await response.json();

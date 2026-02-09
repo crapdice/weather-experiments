@@ -95,8 +95,14 @@ export function AILogsView() {
                             {expandedLog === log.id && (
                                 <div className="log-details">
                                     <div className="response-preview">
-                                        <h4>Generated Commentary:</h4>
-                                        <p>{typeof log.response_text === 'string' ? log.response_text : log.response_text?.commentary || JSON.stringify(log.response_text)}</p>
+                                        <div className="response-header">
+                                            <span className="label">Forensic Headline:</span>
+                                            <h4 className="log-headline">{log.response_text?.headline || 'STATION_ID_UNAVAILABLE'}</h4>
+                                        </div>
+                                        <div className="response-body">
+                                            <span className="label">Analytical Narrative:</span>
+                                            <p className="log-analysis">{log.response_text?.analysis || (typeof log.response_text === 'string' ? log.response_text : JSON.stringify(log.response_text))}</p>
+                                        </div>
                                     </div>
                                     <div className="raw-data">
                                         <h4>Metadata:</h4>
@@ -220,18 +226,32 @@ export function AILogsView() {
                     animation: slideDown 0.3s ease-out;
                 }
                 .response-preview {
-                    margin-bottom: 16px;
+                    margin-bottom: 20px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
                 }
-                .response-preview h4, .raw-data h4 {
-                    font-size: 0.75rem;
-                    color: var(--accent-1);
-                    margin-bottom: 8px;
+                .label {
+                    display: block;
+                    font-size: 0.65rem;
+                    color: var(--text-secondary);
                     text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-bottom: 4px;
+                    opacity: 0.7;
                 }
-                .response-preview p {
-                    font-size: 0.9rem;
-                    line-height: 1.5;
+                .log-headline {
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: #fff;
+                    margin: 0;
+                    line-height: 1.2;
+                }
+                .log-analysis {
+                    font-size: 0.95rem;
+                    line-height: 1.6;
                     color: var(--text-primary);
+                    margin: 0;
                 }
                 .raw-data pre {
                     font-size: 0.75rem;
