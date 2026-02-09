@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Menu, X, Activity, ArrowLeftRight, FlaskConical, RefreshCw } from 'lucide-react';
+import { Menu, X, Activity, ArrowLeftRight, FlaskConical, RefreshCw, Database } from 'lucide-react';
+import { useAdmin } from '@/context/AdminContext';
 
 interface MobileNavProps {
   currentView: string;
@@ -11,6 +12,7 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ currentView, onViewChange, onRefresh, isRefreshing }: MobileNavProps) {
+  const { isAdmin } = useAdmin();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => setIsOpen(!isOpen);
@@ -35,29 +37,38 @@ export function MobileNav({ currentView, onViewChange, onRefresh, isRefreshing }
             <div className="menu-header">
               <h3>Operational Controls</h3>
             </div>
-            
+
             <div className="menu-items">
-              <button 
-                className={currentView === 'overview' ? 'active' : ''} 
+              <button
+                className={currentView === 'overview' ? 'active' : ''}
                 onClick={() => handleNavClick('overview')}
               >
                 <Activity size={20} />
                 Historical Overview
               </button>
-              <button 
-                className={currentView === 'comparison' ? 'active' : ''} 
+              <button
+                className={currentView === 'comparison' ? 'active' : ''}
                 onClick={() => handleNavClick('comparison')}
               >
                 <ArrowLeftRight size={20} />
                 Yearly Comparison
               </button>
-              <button 
-                className={currentView === 'lab' ? 'active' : ''} 
+              <button
+                className={currentView === 'lab' ? 'active' : ''}
                 onClick={() => handleNavClick('lab')}
               >
                 <FlaskConical size={20} />
                 Climate Lab (Beta)
               </button>
+              {isAdmin && (
+                <button
+                  className={currentView === 'admin-logs' ? 'active' : ''}
+                  onClick={() => handleNavClick('admin-logs')}
+                >
+                  <Database size={20} />
+                  Intelligence Archives
+                </button>
+              )}
             </div>
 
             <div className="menu-section">

@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
             generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.8,
-                frequencyPenalty: 0.8,
+                frequencyPenalty: 0.9,
                 presencePenalty: 0.3,
                 maxOutputTokens: 500,
             }

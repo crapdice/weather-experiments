@@ -46,3 +46,28 @@ export async function logAIResponse(entry: AILogEntry) {
         console.error("AI Logging Exception:", err);
     }
 }
+
+export async function getAILogs(limit = 100) {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')) {
+        console.warn('[AI Logger] Cannot fetch logs: missing credentials');
+        return [];
+    }
+
+    try {
+        const { data, error } = await supabaseAdmin
+            .from('ai_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error("Failed to fetch AI logs:", error);
+            return [];
+        }
+
+        return data;
+    } catch (err) {
+        console.error("AI Fetch logs Exception:", err);
+        return [];
+    }
+}

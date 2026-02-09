@@ -14,6 +14,7 @@ import { LoadingState } from './LoadingState';
 import { DashboardHeader } from './DashboardHeader';
 import { SummaryMetrics } from './SummaryMetrics';
 import { LabContainer } from './LabContainer';
+import { AILogsView } from '@/components/Admin/AILogsView';
 
 import { useRouter } from 'next/navigation';
 
@@ -95,30 +96,38 @@ export function Dashboard({ initialCityId, initialStats, initialDataSummary }: D
       <main className="main-content">
         <DashboardHeader data={data} stats={stats} city={selectedCity} />
 
-        <SummaryMetrics
-          data={data}
-          stats={stats}
-          city={selectedCity}
-          onSelectYear={handleYearSelect}
-        />
+        {view === 'admin-logs' ? (
+          <AILogsView />
+        ) : (
+          <>
+            <SummaryMetrics
+              data={data}
+              stats={stats}
+              city={selectedCity}
+              onSelectYear={handleYearSelect}
+            />
 
-        <div className="chart-area glass-panel">
-          {view === 'overview' && data.length > 0 && <OverviewChart data={data} />}
-          {view === 'comparison' && data.length > 0 && (
-            <ComparisonChart data={data} initialYear2={comparisonYear} />
-          )}
-          {view === 'lab' && (
-            <LabContainer labTab={labTab} setLabTab={setLabTab} data={data} stats={stats} />
-          )}
-        </div>
+            <div className="chart-area glass-panel">
+              {view === 'overview' && data.length > 0 && <OverviewChart data={data} />}
+              {view === 'comparison' && data.length > 0 && (
+                <ComparisonChart data={data} initialYear2={comparisonYear} />
+              )}
+              {view === 'lab' && (
+                <LabContainer labTab={labTab} setLabTab={setLabTab} data={data} stats={stats} />
+              )}
+            </div>
+          </>
+        )}
 
-        <SummaryMetrics
-          data={data}
-          stats={stats}
-          city={selectedCity}
-          isSecondary
-          onSelectYear={handleYearSelect}
-        />
+        {view !== 'admin-logs' && (
+          <SummaryMetrics
+            data={data}
+            stats={stats}
+            city={selectedCity}
+            isSecondary
+            onSelectYear={handleYearSelect}
+          />
+        )}
 
         <footer className="footer">
           <hr />

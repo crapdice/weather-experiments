@@ -3,7 +3,7 @@
 import React from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAdmin } from '@/context/AdminContext';
-import { Activity, ArrowLeftRight, FlaskConical, RefreshCw, Lock, Key } from 'lucide-react';
+import { Activity, ArrowLeftRight, FlaskConical, RefreshCw, Lock, Key, Database } from 'lucide-react';
 import { AdminSettingsPanel } from '@/components/Admin/AdminSettingsPanel';
 
 import { CityConfig } from '@/types/weather';
@@ -72,6 +72,15 @@ export function Sidebar({ currentView, onViewChange, recs, startDate, endDate, i
           <FlaskConical size={18} />
           Climate Lab (Beta)
         </button>
+        {isAdmin && (
+          <button
+            className={currentView === 'admin-logs' ? 'active' : ''}
+            onClick={() => onViewChange('admin-logs')}
+          >
+            <Database size={18} />
+            Intelligence Archives
+          </button>
+        )}
       </nav>
 
       <div className="sidebar-section">
