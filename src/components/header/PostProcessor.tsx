@@ -5,7 +5,7 @@ import { useThree, useFrame } from '@react-three/fiber'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
-import { TerminalShader } from '../shaders/TerminalShader'
+import { TerminalShader } from './shaders/TerminalShader'
 
 export const PostProcessor = () => {
     const { gl, scene, camera, size } = useThree()

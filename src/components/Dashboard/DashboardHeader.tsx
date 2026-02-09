@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ClimateStats, WeatherRecord, CityConfig } from '@/types/weather';
-import { SatelliteHeader } from '../SatelliteHeader';
+import { SatelliteHeader } from '@/components/header/SatelliteHeader';
 
 interface DashboardHeaderProps {
     data: WeatherRecord[];

@@ -1,19 +1,19 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Sidebar } from './Sidebar';
-import { MobileNav } from './MobileNav';
-import { OverviewChart } from './OverviewChart';
-import { ComparisonChart } from './ComparisonChart';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { MobileNav } from '@/components/layout/MobileNav';
+import { OverviewChart } from '@/components/charts/OverviewChart';
+import { ComparisonChart } from '@/components/charts/ComparisonChart';
 import { useWeather } from '@/hooks/useWeather';
 
-import { CITIES } from '@/utils/cityConfig';
+import { CITIES } from '@/config/cityConfig';
 
 // Refactored Sub-components
-import { LoadingState } from './Dashboard/LoadingState';
-import { DashboardHeader } from './Dashboard/DashboardHeader';
-import { SummaryMetrics } from './Dashboard/SummaryMetrics';
-import { LabContainer } from './Dashboard/LabContainer';
+import { LoadingState } from './LoadingState';
+import { DashboardHeader } from './DashboardHeader';
+import { SummaryMetrics } from './SummaryMetrics';
+import { LabContainer } from './LabContainer';
 
 import { useRouter } from 'next/navigation';
 

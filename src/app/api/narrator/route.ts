@@ -78,6 +78,10 @@ export async function POST(req: NextRequest) {
             model: "gemini-2.0-flash",
             generationConfig: {
                 responseMimeType: "application/json",
+                temperature: 0.8,
+                frequencyPenalty: 0.8,
+                presencePenalty: 0.3,
+                maxOutputTokens: 500,
             }
         });
 

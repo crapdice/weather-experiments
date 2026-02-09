@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { haversineDistance, findNearestCity } from './geolocation';
-import { CITIES } from './cityConfig';
+import { CITIES } from '@/config/cityConfig';
 
 describe('haversineDistance', () => {
     it('returns 0 for identical coordinates', () => {

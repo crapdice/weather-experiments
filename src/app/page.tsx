@@ -1,4 +1,4 @@
-import { GeoRedirect } from '@/components/GeoRedirect';
+import { GeoRedirect } from '@/components/geolocation/GeoRedirect';
 
 /**
  * Root page - handles geolocation-based routing.

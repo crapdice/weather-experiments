@@ -1,6 +1,6 @@
 import { WeatherRecord, ClimateStats } from '@/types/weather';
 import * as d3 from 'd3';
-import { getSeasonDayIndex } from './seasonRegistry';
+import { getSeasonDayIndex } from '@/config/seasonRegistry';
 import { getDayOfYear, formatDateKey, getComparisonDate } from './dateUtils';
 
 

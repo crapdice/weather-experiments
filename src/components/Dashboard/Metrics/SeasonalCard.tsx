@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { MetricCard } from '@/components/MetricCard';
+import { MetricCard } from '@/components/core/MetricCard';
 import { ClimateStats } from '@/types/weather';
 
 interface SeasonalCardProps {

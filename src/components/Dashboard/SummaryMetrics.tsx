@@ -1,5 +1,5 @@
 import React from 'react';
-import { MetricCard } from '../MetricCard';
+import { MetricCard } from '@/components/core/MetricCard';
 import { ClimateStats, WeatherRecord, CityConfig } from '@/types/weather';
 import { NarratorCard } from './NarratorCard';
 

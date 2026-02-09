@@ -4,7 +4,7 @@ import { getAdminSettings } from '@/utils/adminSettings';
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { CITIES } from '@/utils/cityConfig';
+import { CITIES } from '@/config/cityConfig';
 
 // Map city IDs to their private file names
 const CITY_FILES: Record<string, string> = {

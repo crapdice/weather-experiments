@@ -1,14 +1,14 @@
 "use client";
 
 import React from 'react';
-import { ClimateStripes } from '../ClimateStripes';
-import { ThermalTopo } from '../ThermalTopo';
-import { RadialCompass } from '../RadialCompass';
-import { WinterIntensity } from '../WinterIntensity';
-import { SunriseChart } from '../SunriseChart';
-import { PredictiveLab } from '../PredictiveLab';
-import { SeasonalComparisonPanelV2 } from '../SeasonalComparison';
-import { WeatherFingerprint } from '../WeatherFingerprint';
+import { ClimateStripes } from '@/components/charts/ClimateStripes';
+import { ThermalTopo } from '@/components/charts/ThermalTopo';
+import { RadialCompass } from '@/components/charts/RadialCompass';
+import { WinterIntensity } from '@/components/charts/WinterIntensity';
+import { SunriseChart } from '@/components/charts/SunriseChart';
+import { PredictiveLab } from './PredictiveLab';
+import { SeasonalComparisonPanelV2 } from '@/components/charts/SeasonalComparison';
+import { WeatherFingerprint } from '@/components/charts/WeatherFingerprint';
 import { WeatherRecord, ClimateStats } from '@/types/weather';
 
 interface LabContainerProps {

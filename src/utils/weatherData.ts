@@ -3,7 +3,7 @@ import { calculateZScore, calculatePercentileRank, findLongestRecentStreak, find
 import { calculateSeasonalRank, calculateSeasonalComparisons } from './seasonalEngine';
 import { processAndEnrich, getMoonPhase, getSunTimes } from './dataProcessor';
 import { getDayOfYear } from './dateUtils';
-import { SeasonType, SEASONS, getSeasonNameByDate } from './seasonRegistry';
+import { SeasonType, SEASONS, getSeasonNameByDate } from '@/config/seasonRegistry';
 import { WeatherRecord, ClimateStats, SeasonalRank, WeatherFetchResult, CityConfig } from '../types/weather';
 import { fetchCurrentWeather } from '../services/weatherFetcher';
 import { finalizeResults } from './weatherProcessor';

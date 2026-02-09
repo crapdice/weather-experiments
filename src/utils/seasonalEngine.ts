@@ -6,7 +6,7 @@ import {
     getSeasonNameByDate,
     SeasonType,
     SEASONS
-} from './seasonRegistry';
+} from '@/config/seasonRegistry';
 import { getDayOfYear, formatDateKey } from './dateUtils';
 
 

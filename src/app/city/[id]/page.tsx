@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Dashboard } from '@/components/Dashboard';
-import { CITIES } from '@/utils/cityConfig';
+import { Dashboard } from '@/components/Dashboard/Dashboard';
+import { CITIES } from '@/config/cityConfig';
 import { Metadata } from 'next';
 import { WeatherRecord, ClimateStats } from '@/types/weather';
 import { loadServerWeatherData } from '@/utils/serverWeatherData';

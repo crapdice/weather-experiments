@@ -7,8 +7,8 @@ import { Activity, ArrowLeftRight, FlaskConical, RefreshCw, Lock, Key } from 'lu
 import { AdminSettingsPanel } from '@/components/Admin/AdminSettingsPanel';
 
 import { CityConfig } from '@/types/weather';
-import { CITIES } from '@/utils/cityConfig';
-import { PreciseLocationButton } from '@/components/PreciseLocationButton';
+import { CITIES } from '@/config/cityConfig';
+import { PreciseLocationButton } from '@/components/geolocation/PreciseLocationButton';
 
 interface SidebarProps {
   currentView: string;

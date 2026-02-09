@@ -1,5 +1,5 @@
 import { CityConfig } from '@/types/weather';
-import { CITIES } from './cityConfig';
+import { CITIES } from '@/config/cityConfig';
 
 /**
  * Converts degrees to radians

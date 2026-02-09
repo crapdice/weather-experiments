@@ -2,7 +2,7 @@ import { WeatherRecord, ClimateStats, WeatherFetchResult, CityConfig } from '../
 import { calculateStats, calculateZScore, calculatePercentileRank, findLongestRecentStreak, findAnalogYear, findLastSimilarDate } from './statisticalEngine';
 import { calculateSeasonalRank, calculateSeasonalComparisons } from './seasonalEngine';
 import { getDayOfYear } from './dateUtils';
-import { getSeasonNameByDate } from './seasonRegistry';
+import { getSeasonNameByDate } from '@/config/seasonRegistry';
 import SunCalc from 'suncalc';
 
 export function finalizeResults(data: WeatherRecord[], stats: ClimateStats, currentInfo?: WeatherFetchResult, city?: CityConfig) {
