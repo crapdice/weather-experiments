@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prepareNarratorPayload } from "@/utils/narratorPayload";
 import { isAdmin as checkAdminStatus } from "@/lib/auth";
 import { NARRATOR_PROMPT_TEMPLATE, hydratePrompt } from "@/lib/narrator";
+import { logAIResponse } from "@/services/aiLogger";
 
 // 6-Hour Forensic Cache Initialization
 const CACHE = new Map<string, { data: any; timestamp: number }>();
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
+        const startTime = Date.now();
         const body = await req.json();
         const { city, stats } = body;
 
@@ -108,6 +110,21 @@ export async function POST(req: NextRequest) {
             CACHE.set(cacheKey, {
                 data: briefing,
                 timestamp: Date.now()
+            });
+
+            // LOGGING: Asynchronous fire-and-forget
+            logAIResponse({
+                cityName: payload.city.name,
+                payload: payload,
+                modelId: "gemini-2.0-flash",
+                response: briefing,
+                rawText: text,
+                tokenUsage: {
+                    prompt: response.usageMetadata?.promptTokenCount || 0,
+                    completion: response.usageMetadata?.candidatesTokenCount || 0,
+                    total: response.usageMetadata?.totalTokenCount || 0
+                },
+                processingTimeMs: Date.now() - startTime
             });
 
             return NextResponse.json(briefing);

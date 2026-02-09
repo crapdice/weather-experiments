@@ -16,6 +16,7 @@
     "@google/generative-ai": "^0.24.1",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@supabase/supabase-js": "^2.95.3",
     "@types/suncalc": "^1.9.2",
     "csv-parse": "^6.1.0",
     "d3": "^7.9.0",
